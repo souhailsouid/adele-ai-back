@@ -1,0 +1,9 @@
+{
+  "name": "parser-13f",
+  "version": "1.0.0",
+  "description": "Lambda Python pour parser les fichiers 13F EDGAR",
+  "scripts": {
+    "bundle": "zip -r parser-13f.zip . -x '*.git*' -x '*.zip' -x 'node_modules/*' -x '__pycache__/*' -x '*.pyc'"
+  }
+}
+

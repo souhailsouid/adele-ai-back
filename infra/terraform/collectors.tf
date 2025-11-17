@@ -1,0 +1,243 @@
+# Collectors Lambda pour ADEL AI
+
+# ============================================
+# Collector SEC Watcher (13F filings)
+# ============================================
+resource "aws_cloudwatch_log_group" "collector_sec_watcher" {
+  name              = "/aws/lambda/${var.project}-${var.stage}-collector-sec-watcher"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "collector_sec_watcher" {
+  function_name = "${var.project}-${var.stage}-collector-sec-watcher"
+  role          = aws_iam_role.collector_role.arn
+  runtime       = "nodejs20.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/../../workers/collector-sec-watcher/collector-sec-watcher.zip"
+  timeout       = 300
+  memory_size   = 512
+
+  depends_on = [aws_cloudwatch_log_group.collector_sec_watcher]
+
+  environment {
+    variables = {
+      SUPABASE_URL        = var.supabase_url
+      SUPABASE_SERVICE_KEY = var.supabase_service_key
+      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+    }
+  }
+}
+
+# Cron: toutes les 5 minutes
+resource "aws_cloudwatch_event_rule" "collector_sec_watcher_cron" {
+  name                = "${var.project}-${var.stage}-collector-sec-watcher-cron"
+  description         = "Déclenche le collector SEC watcher toutes les 5 minutes"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "collector_sec_watcher" {
+  rule      = aws_cloudwatch_event_rule.collector_sec_watcher_cron.name
+  target_id = "CollectorSECWatcher"
+  arn       = aws_lambda_function.collector_sec_watcher.arn
+}
+
+resource "aws_lambda_permission" "collector_sec_watcher_events" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.collector_sec_watcher.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.collector_sec_watcher_cron.arn
+}
+
+# ============================================
+# Collector RSS
+# ============================================
+resource "aws_cloudwatch_log_group" "collector_rss" {
+  name              = "/aws/lambda/${var.project}-${var.stage}-collector-rss"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "collector_rss" {
+  function_name = "${var.project}-${var.stage}-collector-rss"
+  role          = aws_iam_role.collector_role.arn
+  runtime       = "nodejs20.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/../../workers/collector-rss/collector-rss.zip"
+  timeout       = 300
+  memory_size   = 512
+
+  depends_on = [aws_cloudwatch_log_group.collector_rss]
+
+  environment {
+    variables = {
+      SUPABASE_URL        = var.supabase_url
+      SUPABASE_SERVICE_KEY = var.supabase_service_key
+      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+    }
+  }
+}
+
+# Cron: toutes les 15 minutes
+resource "aws_cloudwatch_event_rule" "collector_rss_cron" {
+  name                = "${var.project}-${var.stage}-collector-rss-cron"
+  description         = "Déclenche le collector RSS toutes les 15 minutes"
+  schedule_expression = "rate(15 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "collector_rss" {
+  rule      = aws_cloudwatch_event_rule.collector_rss_cron.name
+  target_id = "CollectorRSS"
+  arn       = aws_lambda_function.collector_rss.arn
+}
+
+resource "aws_lambda_permission" "collector_rss_events" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.collector_rss.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.collector_rss_cron.arn
+}
+
+# ============================================
+# Collector CoinGlass
+# ============================================
+resource "aws_cloudwatch_log_group" "collector_coinglass" {
+  name              = "/aws/lambda/${var.project}-${var.stage}-collector-coinglass"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "collector_coinglass" {
+  function_name = "${var.project}-${var.stage}-collector-coinglass"
+  role          = aws_iam_role.collector_role.arn
+  runtime       = "nodejs20.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/../../workers/collector-coinglass/collector-coinglass.zip"
+  timeout       = 300
+  memory_size   = 512
+
+  depends_on = [aws_cloudwatch_log_group.collector_coinglass]
+
+  environment {
+    variables = {
+      SUPABASE_URL        = var.supabase_url
+      SUPABASE_SERVICE_KEY = var.supabase_service_key
+      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      COINGLASS_API_KEY   = var.coinglass_api_key
+    }
+  }
+}
+
+# Cron: toutes les heures
+resource "aws_cloudwatch_event_rule" "collector_coinglass_cron" {
+  name                = "${var.project}-${var.stage}-collector-coinglass-cron"
+  description         = "Déclenche le collector CoinGlass toutes les heures"
+  schedule_expression = "rate(1 hour)"
+}
+
+resource "aws_cloudwatch_event_target" "collector_coinglass" {
+  rule      = aws_cloudwatch_event_rule.collector_coinglass_cron.name
+  target_id = "CollectorCoinGlass"
+  arn       = aws_lambda_function.collector_coinglass.arn
+}
+
+resource "aws_lambda_permission" "collector_coinglass_events" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.collector_coinglass.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.collector_coinglass_cron.arn
+}
+
+# ============================================
+# Collector ScrapeCreators
+# ============================================
+resource "aws_cloudwatch_log_group" "collector_scrapecreators" {
+  name              = "/aws/lambda/${var.project}-${var.stage}-collector-scrapecreators"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "collector_scrapecreators" {
+  function_name = "${var.project}-${var.stage}-collector-scrapecreators"
+  role          = aws_iam_role.collector_role.arn
+  runtime       = "nodejs20.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/../../workers/collector-scrapecreators/collector-scrapecreators.zip"
+  timeout       = 300
+  memory_size   = 512
+
+  depends_on = [aws_cloudwatch_log_group.collector_scrapecreators]
+
+  environment {
+    variables = {
+      SUPABASE_URL        = var.supabase_url
+      SUPABASE_SERVICE_KEY = var.supabase_service_key
+      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      SCRAPECREATORS_API_KEY = var.scrapecreators_api_key
+    }
+  }
+}
+
+# Cron: toutes les 5 minutes
+resource "aws_cloudwatch_event_rule" "collector_scrapecreators_cron" {
+  name                = "${var.project}-${var.stage}-collector-scrapecreators-cron"
+  description         = "Déclenche le collector ScrapeCreators toutes les 5 minutes"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "collector_scrapecreators" {
+  rule      = aws_cloudwatch_event_rule.collector_scrapecreators_cron.name
+  target_id = "CollectorScrapeCreators"
+  arn       = aws_lambda_function.collector_scrapecreators.arn
+}
+
+resource "aws_lambda_permission" "collector_scrapecreators_events" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.collector_scrapecreators.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.collector_scrapecreators_cron.arn
+}
+
+# ============================================
+# IAM Role partagé pour tous les collectors
+# ============================================
+resource "aws_iam_role" "collector_role" {
+  name = "${var.project}-${var.stage}-collector-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# Logs
+resource "aws_iam_role_policy_attachment" "collector_logs" {
+  role       = aws_iam_role.collector_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# EventBridge permissions
+data "aws_iam_policy_document" "collector_eventbridge" {
+  statement {
+    actions = [
+      "events:PutEvents",
+    ]
+    resources = [
+      "arn:aws:events:${var.region}:*:event-bus/${var.project}-${var.stage}-signals",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "collector_eventbridge_policy" {
+  name   = "${var.project}-${var.stage}-collector-eventbridge"
+  policy = data.aws_iam_policy_document.collector_eventbridge.json
+}
+
+resource "aws_iam_role_policy_attachment" "collector_eventbridge" {
+  role       = aws_iam_role.collector_role.name
+  policy_arn = aws_iam_policy.collector_eventbridge_policy.arn
+}
+

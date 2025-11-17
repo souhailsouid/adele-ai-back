@@ -1,0 +1,22 @@
+# Copier ce fichier vers terraform.tfvars et remplir les valeurs
+
+project = "adel-ai"
+stage   = "dev"  # ou "prod", "staging", etc.
+region  = "eu-west-3"
+
+# URLs autorisées pour CORS
+frontend_allowed_origins = [
+  "http://localhost:3000",
+  "https://app.yourdomain.com"
+]
+
+# Supabase (récupérer depuis dashboard Supabase)
+supabase_url = "https://xxxxx.supabase.co"  # Settings → API → Project URL
+supabase_service_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."  # Settings → API → service_role key
+
+# OpenAI (pour traitement IA des signaux)
+openai_api_key = "sk-..."  # Clé API OpenAI
+
+# APIs externes (optionnel pour commencer)
+scrapecreators_api_key = ""  # Clé ScrapeCreators (optionnel)
+coinglass_api_key = ""  # Clé CoinGlass (optionnel)

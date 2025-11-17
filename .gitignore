@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+venv/
+scripts/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build outputs
+dist/
+*.zip
+*.cjs
+*.js.map
+
+# Environment
+.env
+.env.local
+*.tfvars
+!terraform.tfvars.example
+credentials.json
+credentials.json.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+tfplan
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

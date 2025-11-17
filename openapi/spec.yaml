@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: Campaign Backend API
+  version: 0.1.0
+servers:
+  - url: https://api.yourdomain.com
+paths:
+  /orgs/{orgId}:
+    get:
+      summary: Get organization profile
+      security: [{ cognitoUserPool: [] }]
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    patch:
+      summary: Update organization profile & brand/compliance
+      security: [{ cognitoUserPool: [] }]
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationInput'
+      responses:
+        "200": { description: OK }
+
+  /orgs/{orgId}/enrichment/refresh:
+    post:
+      summary: Trigger async enrichment refresh
+      security: [{ cognitoUserPool: [] }]
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Started }
+
+  /campaigns:
+    post:
+      summary: Create campaign (pre-fills from org snapshot unless overridden)
+      security: [{ cognitoUserPool: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCampaignInput' }
+      responses:
+        "200": { description: Created }
+
+  /campaigns/{id}:
+    patch:
+      summary: Update campaign
+      security: [{ cognitoUserPool: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCampaignInput' }
+      responses:
+        "200": { description: OK }
+
+components:
+  securitySchemes:
+    cognitoUserPool:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://{your-cognito-domain}.auth.{region}.amazoncognito.com/oauth2/authorize
+          tokenUrl: https://{your-cognito-domain}.auth.{region}.amazoncognito.com/oauth2/token
+          scopes:
+            openid: OpenID
+            email: Email
+            profile: Profile
+  schemas:
+    UpdateOrganizationInput:
+      type: object
+      properties:
+        company_website_url: { type: string, format: uri }
+        brand_logo_url:      { type: string, format: uri }
+        brand_primary_color: { type: string }
+        sender_profile:
+          type: object
+          properties:
+            sender_name:       { type: string }
+            sender_title:      { type: string }
+            mail_from_domain:  { type: string }
+            reply_to_email:    { type: string, format: email }
+        compliance:
+          type: object
+          properties:
+            mode: { type: string, enum: [B2B, B2C] }
+            unsubscribe_link_template: { type: string }
+            legal_country: { type: string }
+    CreateCampaignInput:
+      type: object
+      required: [org_id, name, language, objective_type, objective_details, target_persona]
+      properties:
+        org_id: { type: string }
+        name: { type: string }
+        language: { type: string, enum: [en, fr, ar] }
+        objective_type: { type: string, enum: [lead_gen, recruiting, other] }
+        objective_details: { type: string }
+        target_persona: { type: string }
+        personalization_focus: { type: string }
+        company_context_source: { type: string, enum: [org_snapshot, custom_override] }
+        company_context:
+          type: object
+          properties:
+            about: { type: string }
+            value_props:
+              type: array
+              items: { type: string }
+    UpdateCampaignInput:
+      allOf:
+        - $ref: '#/components/schemas/CreateCampaignInput'
