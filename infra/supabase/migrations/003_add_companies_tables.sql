@@ -91,3 +91,4 @@ COMMENT ON TABLE insider_trades IS 'Transactions des dirigeants (Form 4)';
 
 
 
+

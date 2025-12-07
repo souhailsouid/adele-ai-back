@@ -1,0 +1,303 @@
+### REST Client pour VS Code
+### Extension: REST Client (humao.rest-client)
+### 
+### Variables d'environnement (à définir dans VS Code settings ou dans ce fichier)
+### @baseUrl = https://tsdd1sibd1.execute-api.eu-west-3.amazonaws.com/prod
+### @accessToken = your_access_token_here
+
+@baseUrl = https://tsdd1sibd1.execute-api.eu-west-3.amazonaws.com/prod
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJmMWU5OTA3ZS01MDIxLTcwZmUtMzA4ZS0zMzc3NzgyYmE2NjgiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImVjOTIyYjViLWNlZTMtNDZlYS04ZGEyLTkwMzc4YmVjODg1YyIsImV2ZW50X2lkIjoiMzMxMjBmMGQtMjQwOC00Yzc1LTkyYTYtMjAxMTQ4ZmIxYzRjIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NTEwNTA5OCwiZXhwIjoxNzY1MTA4Njk4LCJpYXQiOjE3NjUxMDUwOTgsImp0aSI6ImQxMzFmNWFiLTQyZWUtNGQxZS1iZDAxLWFkMjQ4NjJmZjExNCIsInVzZXJuYW1lIjoiZjFlOTkwN2UtNTAyMS03MGZlLTMwOGUtMzM3Nzc4MmJhNjY4In0.YQpe-NkA6YjB62uy1cyEL8YPCf9gfVRiX1wb0xcw4lgAp0Eo4FDNIDBev7Q7R6fRM5f0fmq0qak47g8CKLOKAM6K8z3xQ9SMwTb6kzY-LSEwg057qmFnfIAr4yoprA6eBRKda1xaK5G4ORUqYddF86j9J-QxS8hdkiLn9mjheXp1WNXd0wNVeJFmpe8iAa2DkJjaafKwY7QvBMYNVHjsIg4J_-Mi6EfijlV5RdrNK3HNGmQ-ezN9KQsXWKSWmvbCJbZxWFExuXCSw5iCrzIOwMKOwSVZswLa02Ev3O0AwGhz6JttlVqcg9L5gfHmwpVawmFf1WsvwXRMGAFKQaOTgg
+
+### ============================================
+### ANALYSE COMBINÉE (FMP + UW)
+### ============================================
+
+### Complete Analysis - Analyse complète (fundamentals + sentiment)
+GET {{baseUrl}}/analysis/AAPL/complete
+Authorization: Bearer {{accessToken}}
+
+### Complete Analysis - TSLA
+GET {{baseUrl}}/analysis/TSLA/complete
+Authorization: Bearer {{accessToken}}
+
+### Complete Analysis - NVDA
+GET {{baseUrl}}/analysis/NVDA/complete
+Authorization: Bearer {{accessToken}}
+
+### Divergence Analysis - Détecte les divergences fundamentals vs sentiment
+GET {{baseUrl}}/analysis/AAPL/divergence
+Authorization: Bearer {{accessToken}}
+
+### Divergence Analysis - NVDA
+GET {{baseUrl}}/analysis/NVDA/divergence
+Authorization: Bearer {{accessToken}}
+
+### Comprehensive Valuation - Valuation complète (DCF + Sentiment Multiplier)
+GET {{baseUrl}}/analysis/AAPL/valuation
+Authorization: Bearer {{accessToken}}
+
+### Comprehensive Valuation - MSFT
+GET {{baseUrl}}/analysis/MSFT/valuation
+Authorization: Bearer {{accessToken}}
+
+### Earnings Prediction - Prédiction de surprise d'earnings
+GET {{baseUrl}}/analysis/AAPL/earnings-prediction
+Authorization: Bearer {{accessToken}}
+
+### Earnings Prediction - Avec date spécifique
+GET {{baseUrl}}/analysis/AAPL/earnings-prediction?earningsDate=2025-01-30
+Authorization: Bearer {{accessToken}}
+
+### Earnings Prediction - TSLA
+GET {{baseUrl}}/analysis/TSLA/earnings-prediction
+Authorization: Bearer {{accessToken}}
+
+### Risk Analysis - Analyse de risque (financier + marché)
+GET {{baseUrl}}/analysis/AAPL/risk
+Authorization: Bearer {{accessToken}}
+
+### Risk Analysis - TSLA
+GET {{baseUrl}}/analysis/TSLA/risk
+Authorization: Bearer {{accessToken}}
+
+### Risk Analysis - NVDA
+GET {{baseUrl}}/analysis/NVDA/risk
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### SCREENER MULTI-CRITÈRES
+### ============================================
+
+### Multi-Criteria Screener - Screening avec critères FMP + UW
+POST {{baseUrl}}/screener/multi-criteria
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "minMarketCap": 1000000000,
+  "maxPERatio": 30,
+  "minRevenueGrowth": 5,
+  "limit": 10
+}
+
+### Multi-Criteria Screener - Technology sector
+POST {{baseUrl}}/screener/multi-criteria
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "sector": "Technology",
+  "minMarketCap": 10000000000,
+  "maxPERatio": 25,
+  "limit": 5
+}
+
+### ============================================
+### INSTITUTION TRACKING
+### ============================================
+
+### Institution Tracking - Berkshire Hathaway
+GET {{baseUrl}}/institutions/Berkshire%20Hathaway/tracking
+Authorization: Bearer {{accessToken}}
+
+### Institution Tracking - BlackRock
+GET {{baseUrl}}/institutions/BlackRock/tracking
+Authorization: Bearer {{accessToken}}
+
+### Institution Tracking - Vanguard
+GET {{baseUrl}}/institutions/Vanguard/tracking
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### SECTOR ANALYSIS
+### ============================================
+
+### Sector Analysis - Technology
+GET {{baseUrl}}/analysis/sector/Technology
+Authorization: Bearer {{accessToken}}
+
+### Sector Analysis - Healthcare
+GET {{baseUrl}}/analysis/sector/Healthcare
+Authorization: Bearer {{accessToken}}
+
+### Sector Analysis - Financial
+GET {{baseUrl}}/analysis/sector/Financial
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### UNUSUAL WHALES - Endpoints utilisés par les analyses combinées
+### ============================================
+
+### Recent Flows - Flow d'options récent
+GET {{baseUrl}}/unusual-whales/stock/AAPL/flow-recent?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Recent Flows - TSLA
+GET {{baseUrl}}/unusual-whales/stock/TSLA/flow-recent?limit=10&min_premium=50000
+Authorization: Bearer {{accessToken}}
+
+### Institution Ownership - Propriété institutionnelle
+GET {{baseUrl}}/unusual-whales/institution/AAPL/ownership
+Authorization: Bearer {{accessToken}}
+
+### Short Interest and Float - Intérêt à découvert
+GET {{baseUrl}}/unusual-whales/shorts/AAPL/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Dark Pool Trades - Transactions dark pool
+GET {{baseUrl}}/unusual-whales/dark-pool/AAPL?limit=50
+Authorization: Bearer {{accessToken}}
+
+### Insider Buy/Sells - Transactions d'insiders
+GET {{baseUrl}}/unusual-whales/stock/AAPL/insider-buy-sells
+Authorization: Bearer {{accessToken}}
+
+### Institution Activity - Activité institutionnelle
+GET {{baseUrl}}/unusual-whales/institution/AAPL/activity?limit=100
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### FMP - Endpoints utilisés par les analyses combinées
+### ============================================
+
+### Stock Quote - Cotation
+GET {{baseUrl}}/fmp/quote/AAPL
+Authorization: Bearer {{accessToken}}
+
+### Income Statement - État des résultats
+GET {{baseUrl}}/fmp/income-statement/AAPL?limit=5&period=annual
+Authorization: Bearer {{accessToken}}
+
+### Financial Ratios - Ratios financiers
+GET {{baseUrl}}/fmp/financial-ratios/AAPL?limit=5
+Authorization: Bearer {{accessToken}}
+
+### Key Metrics - Métriques clés
+GET {{baseUrl}}/fmp/key-metrics/AAPL?limit=5
+Authorization: Bearer {{accessToken}}
+
+### Balance Sheet - Bilan
+GET {{baseUrl}}/fmp/balance-sheet-statement/AAPL?limit=1
+Authorization: Bearer {{accessToken}}
+
+### Cash Flow Statement - État des flux de trésorerie
+GET {{baseUrl}}/fmp/cash-flow-statement/AAPL?limit=1
+Authorization: Bearer {{accessToken}}
+
+### DCF Valuation - Valorisation DCF
+GET {{baseUrl}}/fmp/dcf-valuation/AAPL
+Authorization: Bearer {{accessToken}}
+
+### Levered DCF - DCF avec effet de levier
+GET {{baseUrl}}/fmp/levered-dcf/AAPL
+Authorization: Bearer {{accessToken}}
+
+### Earnings Report - Rapport de résultats
+GET {{baseUrl}}/fmp/earnings-report/AAPL
+Authorization: Bearer {{accessToken}}
+
+### Financial Estimates - Estimations financières
+GET {{baseUrl}}/fmp/financial-estimates/AAPL?period=quarter
+Authorization: Bearer {{accessToken}}
+
+### Ratings Snapshot - Aperçu des notations
+GET {{baseUrl}}/fmp/ratings-snapshot/AAPL
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### TICKER ACTIVITY (Legacy)
+### ============================================
+
+### Ticker Quote - Cotation
+GET {{baseUrl}}/ticker-activity/AAPL/quote
+Authorization: Bearer {{accessToken}}
+
+### Ticker Activity - Activité
+GET {{baseUrl}}/ticker-activity/AAPL/activity
+Authorization: Bearer {{accessToken}}
+
+### Ticker Options - Options
+GET {{baseUrl}}/ticker-activity/AAPL/options?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Ticker Dark Pool - Dark pool
+GET {{baseUrl}}/ticker-activity/AAPL/dark-pool?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Ticker Insights - Insights complets
+GET {{baseUrl}}/ticker-insights/AAPL
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### TESTS DE VALIDATION DES DONNÉES
+### ============================================
+
+### Test 1: Vérifier que Recent Flows retourne des données
+GET {{baseUrl}}/unusual-whales/stock/AAPL/flow-recent?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Test 2: Vérifier que Institution Ownership retourne des données
+GET {{baseUrl}}/unusual-whales/institution/AAPL/ownership
+Authorization: Bearer {{accessToken}}
+
+### Test 3: Vérifier que Short Interest retourne des données
+GET {{baseUrl}}/unusual-whales/shorts/AAPL/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Test 4: Vérifier que Dark Pool retourne des données
+GET {{baseUrl}}/unusual-whales/dark-pool/AAPL?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Test 5: Vérifier que Complete Analysis utilise les données UW
+GET {{baseUrl}}/analysis/AAPL/complete
+Authorization: Bearer {{accessToken}}
+
+### Test 6: Vérifier que Valuation a un prix actuel valide
+GET {{baseUrl}}/analysis/AAPL/valuation
+Authorization: Bearer {{accessToken}}
+
+### Test 7: Vérifier que Earnings Prediction a des signaux valides
+GET {{baseUrl}}/analysis/AAPL/earnings-prediction
+Authorization: Bearer {{accessToken}}
+
+### Test 8: Vérifier que Score retourne des données
+GET {{baseUrl}}/ticker-analysis/AAPL/score 
+Authorization: Bearer {{accessToken}}
+
+### Test 9: Vérifier que Breakdown retourne des données
+GET {{baseUrl}}/ticker-analysis/AAPL/breakdown
+Authorization: Bearer {{accessToken}}
+
+### Test 10: Vérifier que Institution Tracking retourne des données
+GET {{baseUrl}}/institutions/Berkshire%20Hathaway/tracking
+Authorization: Bearer {{accessToken}}
+
+### Test 11: Vérifier que Gamma Squeeze retourne des données
+GET {{baseUrl}}/ticker-analysis/TSLA/gamma-squeeze
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### NOTES
+### ============================================
+###
+### 1. Remplacez {{accessToken}} par votre token d'accès valide
+### 2. Le token expire après un certain temps, régénérez-le si nécessaire
+### 3. Pour utiliser des variables d'environnement dans VS Code:
+###    - Ouvrez les settings (Cmd/Ctrl + ,)
+###    - Cherchez "rest-client.environmentVariables"
+###    - Ajoutez vos variables
+###
+### 4. Pour tester un endpoint:
+###    - Cliquez sur "Send Request" au-dessus de la requête
+###    - Ou utilisez Cmd/Ctrl + Alt + R
+###
+### 5. Les réponses s'affichent dans un onglet à droite
+###
+### 6. Valeurs suspectes à surveiller:
+###    - sentiment.score = 50 (valeur par défaut)
+###    - callVolume = 0 et putVolume = 0 (pas de données options)
+###    - currentPrice = 0 (prix non extrait)
+###    - totalHoldings = 0 (pas de holdings)
+###    - averagePE = 0 (PE non calculé)
+###
+

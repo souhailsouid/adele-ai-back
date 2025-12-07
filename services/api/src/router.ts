@@ -22,9 +22,13 @@ import {
   getTickerDarkPool,
   getTickerStats,
 } from "./ticker-activity";
+import { getTickerInsights } from "./ticker-insights";
 import * as fmp from "./fmp";
 import * as uw from "./unusual-whales";
 import { fmpRoutes } from "./routes/fmp.routes";
+import { combinedAnalysisRoutes } from "./routes/combined-analysis.routes";
+import { scoringRoutes } from "./routes/scoring.routes";
+import { gammaSqueezeRoutes } from "./routes/gamma-squeeze.routes";
 import type { NotificationType } from "./types/unusual-whales/alerts";
 import type {
   InstitutionalHoldingsQueryParams,
@@ -442,9 +446,25 @@ const routes: Route[] = [
           return await getTickerStats(ticker);
         },
       },
+      // ========== Ticker Insights (Agrégation complète) ==========
+      {
+        method: "GET",
+        path: "/ticker-insights/{ticker}",
+        handler: async (event) => {
+          const ticker = getPathParam(event, "ticker");
+          if (!ticker) throw new Error("Missing ticker parameter");
+          return await getTickerInsights(ticker);
+        },
+      },
       // ========== FMP API Routes ==========
       // Routes FMP sont maintenant dans ./routes/fmp.routes.ts
       ...fmpRoutes,
+      // ========== Combined Analysis Routes (FMP + UW) ==========
+      ...combinedAnalysisRoutes,
+      // ========== Scoring Routes ==========
+      ...scoringRoutes,
+      // ========== Gamma Squeeze Routes ==========
+      ...gammaSqueezeRoutes,
       // ========== Unusual Whales API Routes ==========
       {
         method: "GET",

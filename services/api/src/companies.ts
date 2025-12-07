@@ -179,3 +179,4 @@ export async function getCompanyInsiderTrades(companyId: number) {
 
 
 
+

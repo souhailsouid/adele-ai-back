@@ -3274,13 +3274,23 @@ export class UnusualWhalesRepository {
     return handleError(async () => {
       const endpoint = `/shorts/${ticker.toUpperCase()}/interest-float`;
 
-      const response = await this.client.get<ShortInterestAndFloatResponse>(endpoint);
+      const response = await this.client.get<any>(endpoint);
+
+      // L'API retourne un tableau, prendre le premier élément (le plus récent)
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        return {
+          data: response.data[0],
+        };
+      }
 
       if (!response || !response.data) {
         throw new ExternalApiError('Unusual Whales', 'Invalid response format from /shorts/{ticker}/interest-float endpoint');
       }
 
-      return response;
+      // Si c'est déjà un objet unique
+      return {
+        data: response.data,
+      };
     }, `Get short interest and float for ${ticker}`);
   }
 

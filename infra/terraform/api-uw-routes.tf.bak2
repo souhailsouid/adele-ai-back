@@ -1,0 +1,981 @@
+# Routes Unusual Whales API
+
+# Institution Ownership
+# resource "aws_apigatewayv2_route" "get_uw_institution_ownership" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution-ownership/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Institution Activity
+# resource "aws_apigatewayv2_route" "get_uw_institution_activity" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution-activity/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Options Flow
+# resource "aws_apigatewayv2_route" "get_uw_options_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/options-flow/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Flow Alerts
+# resource "aws_apigatewayv2_route" "get_uw_flow_alerts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/flow-alerts/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Flow
+# resource "aws_apigatewayv2_route" "get_uw_greek_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/greek-flow/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Dark Pool Recent
+# resource "aws_apigatewayv2_route" "get_uw_dark_pool_recent" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/dark-pool/recent"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Dark Pool Ticker
+# resource "aws_apigatewayv2_route" "get_uw_dark_pool_ticker" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/dark-pool/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Trades
+# resource "aws_apigatewayv2_route" "get_uw_insider_trades" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/insider-trades/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Congress Trader
+# resource "aws_apigatewayv2_route" "get_uw_congress_trader" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/congress-trader"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Congress Late Reports
+# resource "aws_apigatewayv2_route" "get_uw_congress_late_reports" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/congress-late-reports"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Congress Recent Trades
+# resource "aws_apigatewayv2_route" "get_uw_congress_recent_trades" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/congress-recent-trades"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Congress Trades (alias pour compatibilité)
+# resource "aws_apigatewayv2_route" "get_uw_congress_trades" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/congress-trades/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Option Chains
+# resource "aws_apigatewayv2_route" "get_uw_option_chains" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-chains/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Alerts
+# resource "aws_apigatewayv2_route" "get_uw_alerts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/alerts"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Alert Configurations
+# resource "aws_apigatewayv2_route" "get_uw_alert_configurations" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/alert-configurations"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Earnings Afterhours
+# resource "aws_apigatewayv2_route" "get_uw_earnings_afterhours" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/earnings/afterhours"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Earnings Premarket
+# resource "aws_apigatewayv2_route" "get_uw_earnings_premarket" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/earnings/premarket"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Earnings Historical
+# resource "aws_apigatewayv2_route" "get_uw_earnings_historical" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/earnings/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF Exposure
+# resource "aws_apigatewayv2_route" "get_uw_etf_exposure" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/etfs/{ticker}/exposure"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF Holdings
+# resource "aws_apigatewayv2_route" "get_uw_etf_holdings" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/etfs/{ticker}/holdings"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF In-Outflow
+# resource "aws_apigatewayv2_route" "get_uw_etf_in_outflow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/etfs/{ticker}/in-outflow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF Info
+# resource "aws_apigatewayv2_route" "get_uw_etf_info" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/etfs/{ticker}/info"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF Weights
+# resource "aws_apigatewayv2_route" "get_uw_etf_weights" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/etfs/{ticker}/weights"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Group Flow Greek Flow
+# resource "aws_apigatewayv2_route" "get_uw_group_greek_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/group-flow/{flow_group}/greek-flow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Group Flow Greek Flow By Expiry
+# resource "aws_apigatewayv2_route" "get_uw_group_greek_flow_by_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/group-flow/{flow_group}/greek-flow/{expiry}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Transactions
+# resource "aws_apigatewayv2_route" "get_uw_insider_transactions" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/insider/transactions"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Sector Flow
+# resource "aws_apigatewayv2_route" "get_uw_insider_sector_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/insider/{sector}/sector-flow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insiders
+# resource "aws_apigatewayv2_route" "get_uw_insiders" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/insider/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Ticker Flow
+# resource "aws_apigatewayv2_route" "get_uw_insider_ticker_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/insider/{ticker}/ticker-flow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Institutional Activity
+# resource "aws_apigatewayv2_route" "get_uw_institutional_activity" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution/{name}/activity"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Institutional Holdings
+# resource "aws_apigatewayv2_route" "get_uw_institutional_holdings" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution/{name}/holdings"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Sector Exposure
+# resource "aws_apigatewayv2_route" "get_uw_sector_exposure" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution/{name}/sectors"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Institutional Ownership
+# resource "aws_apigatewayv2_route" "get_uw_institutional_ownership" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institution/{ticker}/ownership"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Institutions
+# resource "aws_apigatewayv2_route" "get_uw_institutions" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institutions"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Latest Filings
+# resource "aws_apigatewayv2_route" "get_uw_latest_filings" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/institutions/latest-filings"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Market ==========
+
+# Correlations
+# resource "aws_apigatewayv2_route" "get_uw_correlations" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/correlations"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Economic Calendar
+# resource "aws_apigatewayv2_route" "get_uw_economic_calendar" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/economic-calendar"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# FDA Calendar
+# resource "aws_apigatewayv2_route" "get_uw_fda_calendar" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/fda-calendar"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Buy Sells
+# resource "aws_apigatewayv2_route" "get_uw_insider_buy_sells" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/insider-buy-sells"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Market Tide
+# resource "aws_apigatewayv2_route" "get_uw_market_tide" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/market-tide"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# OI Change
+# resource "aws_apigatewayv2_route" "get_uw_oi_change" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/oi-change"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Sector ETFs
+# resource "aws_apigatewayv2_route" "get_uw_sector_etfs" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/sector-etfs"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# SPIKE
+# resource "aws_apigatewayv2_route" "get_uw_spike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/spike"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Top Net Impact
+# resource "aws_apigatewayv2_route" "get_uw_top_net_impact" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/top-net-impact"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Total Options Volume
+# resource "aws_apigatewayv2_route" "get_uw_total_options_volume" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/total-options-volume"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Sector Tide
+# resource "aws_apigatewayv2_route" "get_uw_sector_tide" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/{sector}/sector-tide"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ETF Tide
+# resource "aws_apigatewayv2_route" "get_uw_etf_tide" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/market/{ticker}/etf-tide"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Net Flow Expiry
+# resource "aws_apigatewayv2_route" "get_uw_net_flow_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/net-flow/expiry"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Shorts ==========
+
+# Short Data
+# resource "aws_apigatewayv2_route" "get_uw_short_data" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/shorts/{ticker}/data"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Failures to Deliver
+# resource "aws_apigatewayv2_route" "get_uw_failures_to_deliver" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/shorts/{ticker}/ftds"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Short Interest and Float
+# resource "aws_apigatewayv2_route" "get_uw_short_interest_float" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/shorts/{ticker}/interest-float"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Short Volume and Ratio
+# resource "aws_apigatewayv2_route" "get_uw_short_volume_ratio" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/shorts/{ticker}/volume-and-ratio"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Short Volume By Exchange
+# resource "aws_apigatewayv2_route" "get_uw_short_volume_by_exchange" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/shorts/{ticker}/volumes-by-exchange"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Seasonality ==========
+
+# Year-Month Price Change
+# resource "aws_apigatewayv2_route" "get_uw_year_month_price_change" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/seasonality/{ticker}/year-month"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Monthly Average Return
+# resource "aws_apigatewayv2_route" "get_uw_monthly_avg_return" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/seasonality/{ticker}/monthly"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Month Performers
+# resource "aws_apigatewayv2_route" "get_uw_month_performers" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/seasonality/{month}/performers"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Market Seasonality
+# resource "aws_apigatewayv2_route" "get_uw_market_seasonality" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/seasonality/market"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Screener ==========
+
+# Analyst Ratings
+# resource "aws_apigatewayv2_route" "get_uw_analyst_ratings" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/screener/analysts"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Option Contracts (Hottest Chains)
+# resource "aws_apigatewayv2_route" "get_uw_option_contracts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/screener/option-contracts"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Stock Screener
+# resource "aws_apigatewayv2_route" "get_uw_stock_screener" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/screener/stocks"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Option Trade ==========
+
+# Flow Alerts
+# resource "aws_apigatewayv2_route" "get_uw_option_trade_flow_alerts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-trades/flow-alerts"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Full Tape
+# resource "aws_apigatewayv2_route" "get_uw_full_tape" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-trades/full-tape/{date}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Option Contract ==========
+
+# Flow Data
+# resource "aws_apigatewayv2_route" "get_uw_option_contract_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-contract/{id}/flow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Historic Data
+# resource "aws_apigatewayv2_route" "get_uw_option_contract_historic" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-contract/{id}/historic"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Intraday Data
+# resource "aws_apigatewayv2_route" "get_uw_option_contract_intraday" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-contract/{id}/intraday"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Volume Profile
+# resource "aws_apigatewayv2_route" "get_uw_option_contract_volume_profile" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/option-contract/{id}/volume-profile"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Expiry Breakdown
+# resource "aws_apigatewayv2_route" "get_uw_expiry_breakdown" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/expiry-breakdown"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Stock Option Contracts
+# resource "aws_apigatewayv2_route" "get_uw_stock_option_contracts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/option-contracts"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== Stock ==========
+
+# Tickers in Sector
+# resource "aws_apigatewayv2_route" "get_uw_stock_tickers_in_sector" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{sector}/tickers"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ATM Chains
+# resource "aws_apigatewayv2_route" "get_uw_stock_atm_chains" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/atm-chains"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Flow Alerts
+# resource "aws_apigatewayv2_route" "get_uw_stock_flow_alerts" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/flow-alerts"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Flow Per Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_flow_per_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/flow-per-expiry"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Flow Per Strike
+# resource "aws_apigatewayv2_route" "get_uw_stock_flow_per_strike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/flow-per-strike"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Flow Per Strike Intraday
+# resource "aws_apigatewayv2_route" "get_uw_stock_flow_per_strike_intraday" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/flow-per-strike-intraday"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Recent Flows
+# resource "aws_apigatewayv2_route" "get_uw_stock_flow_recent" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/flow-recent"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Exposure
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_exposure" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-exposure"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Exposure By Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_exposure_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-exposure/expiry"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Exposure By Strike
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_exposure_strike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-exposure/strike"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Exposure By Strike And Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_exposure_strike_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-exposure/strike-expiry"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Flow
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_flow" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-flow"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greek Flow By Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_greek_flow_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greek-flow/{expiry}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Greeks
+# resource "aws_apigatewayv2_route" "get_uw_stock_greeks" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/greeks"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Historical Risk Reversal Skew
+# resource "aws_apigatewayv2_route" "get_uw_stock_historical_risk_reversal_skew" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/historical-risk-reversal-skew"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Stock Information
+# resource "aws_apigatewayv2_route" "get_uw_stock_info" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/info"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Insider Buy & Sells
+# resource "aws_apigatewayv2_route" "get_uw_stock_insider_buy_sells" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/insider-buy-sells"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Interpolated IV
+# resource "aws_apigatewayv2_route" "get_uw_stock_interpolated_iv" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/interpolated-iv"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# IV Rank
+# resource "aws_apigatewayv2_route" "get_uw_stock_iv_rank" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/iv-rank"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Max Pain
+# resource "aws_apigatewayv2_route" "get_uw_stock_max_pain" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/max-pain"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Net Premium Ticks
+# resource "aws_apigatewayv2_route" "get_uw_stock_net_prem_ticks" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/net-prem-ticks"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# NOPE
+# resource "aws_apigatewayv2_route" "get_uw_stock_nope" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/nope"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# OHLC
+# resource "aws_apigatewayv2_route" "get_uw_stock_ohlc" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/ohlc/{candle_size}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# OI Change
+# resource "aws_apigatewayv2_route" "get_uw_stock_oi_change" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/oi-change"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# OI Per Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_oi_per_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/oi-per-expiry"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# OI Per Strike
+# resource "aws_apigatewayv2_route" "get_uw_stock_oi_per_strike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/oi-per-strike"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Option Chains
+# resource "aws_apigatewayv2_route" "get_uw_stock_option_chains" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/option-chains"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Option Stock Price Levels
+# resource "aws_apigatewayv2_route" "get_uw_stock_option_stock_price_levels" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/option/stock-price-levels"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Volume & OI Per Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_option_volume_oi_expiry" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/option/volume-oi-expiry"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Options Volume
+# resource "aws_apigatewayv2_route" "get_uw_stock_options_volume" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/options-volume"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Spot GEX Exposures
+# resource "aws_apigatewayv2_route" "get_uw_stock_spot_exposures" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/spot-exposures"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Spot GEX Exposures By Strike & Expiry
+# resource "aws_apigatewayv2_route" "get_uw_stock_spot_exposures_expiry_strike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/spot-exposures/expiry-strike"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Spot GEX Exposures By Strike
+# resource "aws_apigatewayv2_route" "get_uw_stock_spot_exposures_strike" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/spot-exposures/strike"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Stock State
+# resource "aws_apigatewayv2_route" "get_uw_stock_state" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/stock-state"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Stock Volume Price Levels
+# resource "aws_apigatewayv2_route" "get_uw_stock_volume_price_levels" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/stock-volume-price-levels"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Realized Volatility
+# resource "aws_apigatewayv2_route" "get_uw_stock_volatility_realized" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/volatility/realized"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Volatility Statistics
+# resource "aws_apigatewayv2_route" "get_uw_stock_volatility_stats" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/volatility/stats"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Implied Volatility Term Structure
+# resource "aws_apigatewayv2_route" "get_uw_stock_volatility_term_structure" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/stock/{ticker}/volatility/term-structure"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# ========== News ==========
+
+# News Headlines
+# resource "aws_apigatewayv2_route" "get_uw_news_headlines" {
+#   api_id             = aws_apigatewayv2_api.http.id
+#   route_key          = "GET /unusual-whales/news/headlines"
+#   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+

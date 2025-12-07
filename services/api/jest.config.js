@@ -27,5 +27,6 @@ export default {
     '!src/index.ts',
   ],
   testTimeout: 30000,
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
 };
 
