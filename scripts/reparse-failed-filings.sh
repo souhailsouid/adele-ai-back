@@ -9,8 +9,8 @@ if [ -z "$FUND_ID" ]; then
   exit 1
 fi
 
-SUPABASE_URL="${SUPABASE_URL:-https://nmynjtrppwhiwlxfdzdh.supabase.co}"
-SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6}"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
+SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-your-service-key}"
 EVENT_BUS_NAME="adel-ai-dev-signals"
 REGION="eu-west-3"
 

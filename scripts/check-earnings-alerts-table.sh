@@ -12,7 +12,7 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-SUPABASE_URL="${SUPABASE_URL:-https://nmynjtrppwhiwlxfdzdh.supabase.co}"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
 SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-}"
 
 if [ -z "$SUPABASE_KEY" ]; then
@@ -73,6 +73,9 @@ else
     echo ""
     echo "✅ Tout est prêt !"
 fi
+
+
+
 
 
 

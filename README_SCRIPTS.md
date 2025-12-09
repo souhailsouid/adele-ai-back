@@ -91,12 +91,12 @@ Créez `.vscode/launch.json` :
       "runtimeArgs": ["run", "dev"],
       "cwd": "${workspaceFolder}/services/api",
       "env": {
-        "SUPABASE_URL": "https://nmynjtrppwhiwlxfdzdh.supabase.co",
-        "SUPABASE_SERVICE_KEY": "sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6",
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_SERVICE_KEY": "VOTRE_CLE_SUPABASE",
         "COGNITO_ISSUER": "https://cognito-idp.eu-west-3.amazonaws.com/eu-west-3_FQDmhxV14",
         "COGNITO_AUDIENCE": "pkp4i82jnttthj2cbiltudgva",
-        "UNUSUAL_WHALES_API_KEY": "925866f5-e97f-459d-850d-5d5856fef716",
-        "FMP_API_KEY": "SEZmUVb6Q54FfrThfe3rzyKeG3vmXPQ5"
+        "UNUSUAL_WHALES_API_KEY": "VOTRE_CLE_UW",
+        "FMP_API_KEY": "VOTRE_CLE_FMP"
       },
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"]

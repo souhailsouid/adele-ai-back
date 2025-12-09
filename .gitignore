@@ -17,6 +17,8 @@ dist/
 .env
 .env.local
 *.tfvars
+terraform.tfvars
+
 !terraform.tfvars.example
 credentials.json
 credentials.json.example

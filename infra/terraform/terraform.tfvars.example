@@ -1,32 +1,22 @@
-# Copier ce fichier vers terraform.tfvars et remplir les valeurs
-
 project = "adel-ai"
-stage   = "dev"  # ou "prod", "staging", etc.
+stage   = "dev"
 region  = "eu-west-3"
-
-# URLs autorisées pour CORS
 frontend_allowed_origins = [
   "http://localhost:3000",
-  "https://app.yourdomain.com"
+  "https://main.d15muhyy3o82qt.amplifyapp.com"
 ]
 
-# Supabase (récupérer depuis dashboard Supabase)
-supabase_url = "https://xxxxx.supabase.co"  # Settings → API → Project URL
-supabase_service_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."  # Settings → API → service_role key
+# OpenAI API Key for company enrichment
+openai_api_key = "sk-proj-VOTRE_CLE_OPENAI"
 
-# OpenAI (pour traitement IA des signaux)
-openai_api_key = "sk-..."  # Clé API OpenAI
+supabase_url = "https://your-project.supabase.co"
+supabase_service_key = "sb_secret_VOTRE_CLE_SUPABASE"
+unusual_whales_api_key = "VOTRE_CLE_UW"
+fmp_api_key = "VOTRE_CLE_FMP"
 
-# APIs externes (optionnel pour commencer)
-scrapecreators_api_key = ""  # Clé ScrapeCreators (optionnel)
-coinglass_api_key = ""  # Clé CoinGlass (optionnel)
+# Neo4j AURA
+neo4j_uri = "neo4j+s://your-instance.databases.neo4j.io"
+neo4j_username = "neo4j"
+neo4j_password = "VOTRE_MOT_DE_PASSE_NEO4J"
+neo4j_database = "neo4j"
 
-# APIs financières
-unusual_whales_api_key = ""  # Clé API Unusual Whales (https://unusualwhales.com)
-fmp_api_key = ""  # Clé API Financial Modeling Prep (https://financialmodelingprep.com)
-
-# Neo4j AURA (Graph Database)
-neo4j_uri = "neo4j+s://xxxxx.databases.neo4j.io"  # URI Neo4j AURA
-neo4j_username = "neo4j"  # Username Neo4j (généralement "neo4j")
-neo4j_password = ""  # Password Neo4j AURA
-neo4j_database = "neo4j"  # Database name (généralement "neo4j")

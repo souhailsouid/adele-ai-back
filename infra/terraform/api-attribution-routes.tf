@@ -55,3 +55,10 @@ resource "aws_apigatewayv2_route" "get_graph_test_connection" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+
+
+
+
+
+
+

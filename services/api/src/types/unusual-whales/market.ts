@@ -50,20 +50,32 @@ export interface CorrelationsQueryParams {
 // ========== Economic Calendar ==========
 
 /**
- * Événement du calendrier économique
+ * Événement du calendrier économique (structure réelle de l'API UW)
  * GET /market/economic-calendar
+ * 
+ * Réponse réelle de l'API :
+ * {
+ *   "type": "report",
+ *   "time": "2025-12-12T15:00:00Z",
+ *   "prev": "0.0%",
+ *   "event": "Wholesale inventories",
+ *   "reported_period": "September",
+ *   "forecast": null
+ * }
  */
 export interface EconomicEvent {
-  /** Date de l'événement (date ISO) */
-  date: string; // ISO date: "2024-01-09"
-  /** Description de l'événement */
-  description: string; // Ex: "Nonfarm Payrolls"
-  /** Impact de l'événement */
-  impact: string; // Ex: "High"
-  /** Pays de l'événement */
-  country: string; // Ex: "US"
-  /** Heure de l'événement */
-  time: string; // Ex: "08:30"
+  /** Type d'événement */
+  type: string; // "report" | "FOMC" | "fed-speaker" | "13F" | ...
+  /** Date/heure ISO de l'événement */
+  time: string; // ISO: "2025-12-10T19:00:00Z"
+  /** Valeur précédente (format texte) */
+  prev: string | null; // "0.9%" | "-59600000000" | "" | null
+  /** Nom de l'événement */
+  event: string; // "U.S. trade deficit", "FOMC interest-rate decision", ...
+  /** Période rapportée */
+  reported_period: string | null; // "September", "Q4", ... ou null
+  /** Prévision (format texte) */
+  forecast: string | null; // "0.9%" | "-61600000000" | null
 }
 
 /**

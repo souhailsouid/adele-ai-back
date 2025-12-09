@@ -13,8 +13,8 @@ export SUPABASE_SERVICE_KEY="your-service-key"
 
 ```bash
 # Dans le terminal, avant d'exécuter le script
-export SUPABASE_URL="https://nmynjtrppwhiwlxfdzdh.supabase.co"
-export SUPABASE_SERVICE_KEY="sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6"
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_SERVICE_KEY="your-service-key"
 
 # Puis exécuter le script
 python3 scripts/add-ark-fund.py
@@ -26,8 +26,8 @@ python3 scripts/add-ark-fund.py
 
 ```bash
 # .env (à la racine du projet)
-SUPABASE_URL=https://nmynjtrppwhiwlxfdzdh.supabase.co
-SUPABASE_SERVICE_KEY=sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
 ```
 
 ### Charger le .env dans le script :
@@ -48,8 +48,8 @@ Créer un fichier `scripts/.env.local` (dans .gitignore) :
 
 ```bash
 # scripts/.env.local
-export SUPABASE_URL="https://nmynjtrppwhiwlxfdzdh.supabase.co"
-export SUPABASE_SERVICE_KEY="sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6"
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_SERVICE_KEY="your-service-key"
 ```
 
 Puis utiliser :

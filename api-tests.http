@@ -19,7 +19,7 @@
 @baseUrlData = https://faq9dl95v7.execute-api.eu-west-3.amazonaws.com/prod
 
 ### Token d'accès (à mettre à jour régulièrement)
-@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6IjM2ZjBjMzBjLTAyYjItNDVlZC1iNDA1LWVmYmM3YjQyMTdmNyIsImV2ZW50X2lkIjoiNTUwY2M0ZGEtNmUxZi00NGQyLTg2ZDEtM2FkMGYxZWM4N2MyIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NTE5NjQ3NywiZXhwIjoxNzY1MjAwMDc3LCJpYXQiOjE3NjUxOTY0NzcsImp0aSI6ImEwZjNhMTNjLWNmZGYtNDc0OS04NDcwLTI5MzMwNGZiNjc3MiIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.VT1cd4jJuuY5Z_J4Wh6bi37edFt3GLz6b31_4qYUIcPSNyCUdN7YAxiIQzFqWtfgFTYPrdp20cNtRFSpECmKi0jopwJiBGcinY8uwqEBhVQlBYceMAScesU8VmSF4Nl2ko82QMiyoVoYKWkv49COoDpd71UJl3ZFoh4BKaseRMgqL5f7rAp8l5GxjqMPTigOvC81aJBNdYMZmXmMcWv_cuvNxV2SiqjFbBSWm2uYHij2goJfLqC3QGSj97EZh6VYeF6U6mLKj6-4y3nDe8Mzj4cHqtGaIjpbuH71W06Yx9IDv4HJjXZXoRDTD6vVwKu8yCrJlj-4J7JXRABDyBANbQ
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6IjdjMmMzMjA3LTFiM2MtNGMxZS1iNzIyLTA3MjIzY2U2NzNkMCIsImV2ZW50X2lkIjoiYWYxZDQwOTEtZWUyMy00NzM4LThiNTMtMDYzMjcyYTA2YTZiIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NTI5NTMyMywiZXhwIjoxNzY1Mjk4OTIzLCJpYXQiOjE3NjUyOTUzMjMsImp0aSI6IjhmZTliNGZhLTcyM2UtNGNlZS1iM2Q3LTg1Y2VlN2E5MWJiMCIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.ZijZQQRyvMHFlRHsTl-AZe3grgsv7-_Xhl9r3SAyBqbEFhw5SfFkp5Ca8fZQwjAVqpkFK0wpYIt_oEUmjSnEOKBn_MNmg6zB8POcS5xEOB0opX3tKOdX2IWQX_WJ8HNay8MVXQXixjuczMdy5ZvDVl3Sio3lXph0eSbArEvWx9vjLvr-EGu3bEj9lPMD6zMX-XGNyjcaCB-FBt5nDxCjqtDzZwq1mWlFdaEznU719jA16JgAKmxuPv4HyKcaZMzu4Ss_hPLOCZXw4yW6-pFkFx0-Y2PBsCtIm_a1raUvH2XD4EY7HLoGyQ2X5iVOPw0dE_dBuccRdYegHc_IVIbqPA
 
 @watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
 ### ============================================
@@ -794,6 +794,14 @@ GET {{baseUrlMain}}/attribution/institution/0001364742/ticker/NVDA?period=3M
 Authorization: Bearer {{accessToken}}
 
 ###
+### UW ECONOMIC-CALENDAR 
+GET {{baseUrlData}}/unusual-whales/market/economic-calendar?limit=500
+Authorization: Bearer {{accessToken}}
+
+### Analyse IA du calendrier économique Unusual Whales
+POST {{baseUrlMain}}/ai/economic-calendar-analysis?limit=500
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
 
 ### Trouver les entités dominantes pour un ticker
 GET {{baseUrlMain}}/attribution/dominant-entities/NVDA
@@ -821,5 +829,229 @@ Authorization: Bearer {{accessToken}}
 ###
 ### Si une requête avec un nom d'institution retourne une erreur 500,
 ### essayez d'utiliser le CIK à la place.
+###
+
+### ============================================
+### 🤖 ANALYSE IA (AI Analyst)
+### ============================================
+
+### Analyser un calendrier d'événements (FDA, Earnings, etc.)
+### 100% DYNAMIQUE : Le backend récupère automatiquement toutes les données depuis les APIs
+### APIs invoquées : Economic Calendar, FDA Calendar, Earnings Calendar
+### Période par défaut : 21 jours (si from/to non fournis)
+POST {{baseUrlMain}}/ai/calendar-summary
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "from": "2025-12-09",
+  "to": "2025-12-30"
+}
+
+
+
+###
+### Analyser un flux d'options inhabituel (ENRICHI)
+### 100% DYNAMIQUE : Nécessite seulement { ticker }
+### ✨ NOUVELLES FONCTIONNALITÉS :
+### - Open Interest changes (calls, puts, max OI strikes)
+### - Implied Volatility (current, percentile, skew)
+### - Volume Profile (par strike et par expiry)
+### - Unusual Activity (sweeps, blocks, largest sweep)
+### - Max Pain analysis (price distance)
+### - Price Action (support/resistance, trend)
+### - Upcoming Events (earnings, FDA)
+### - Scénarios multiples (bullish/bearish/neutral) avec probabilités
+### - Recommandations avec strikes/expiries et risk level
+### - Warnings (IV crush, max pain risk)
+POST {{baseUrlMain}}/ai/options-flow-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+###
+### Test Options Flow avec ticker différent
+POST {{baseUrlMain}}/ai/options-flow-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+###
+### Analyser les mouvements d'une institution (ENRICHI)
+### 100% DYNAMIQUE : Le backend récupère automatiquement toutes les données depuis les APIs
+### ✨ NOUVELLES FONCTIONNALITÉS :
+### - Historique des positions (4 trimestres)
+### - Performance des positions (P&L, entry price, holding period)
+### - Concentration du portefeuille (top 10)
+### - Sector Rotation detection
+### - Style Analysis (growth/value/momentum/blend)
+### - Market Context (SPY performance, sector performance)
+### - Strategy Insight avec confidence
+### - Performance Attribution (top performers, underperformers)
+### - Copy Trade Opportunities avec entry strategies
+### - Portfolio Analysis (concentration risk, sector bets)
+POST {{baseUrlMain}}/ai/institution-moves-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "institution_cik": "0001364742",
+  "institution_name": "BLACKROCK, INC.",
+  "period": "3M"
+}
+
+###
+### Test Institution Moves avec Vanguard
+POST {{baseUrlMain}}/ai/institution-moves-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "institution_cik": "0000102909",
+  "institution_name": "VANGUARD GROUP INC",
+  "period": "3M"
+}
+
+###
+### Analyser l'activité globale d'un ticker (À ENRICHIR - Phase 1.5/1.6)
+### 100% DYNAMIQUE : Récupère automatiquement Options Flow, Dark Pool, Insiders, Short Interest, Institutional Ownership, News, Events, Quote
+### ⏳ PROCHAINES AMÉLIORATIONS :
+### - Options Flow détaillé (toutes les métriques enrichies)
+### - Dark Pool Intelligence (patterns, institutions)
+### - Insiders détaillé (transactions, patterns, timing)
+### - Short Interest Trends (évolution, FTDs)
+### - Signal Consensus Analysis
+### - Multi-Scenario Prediction
+### - Entry Strategy Recommendations
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+###
+### Test Ticker Activity avec AAPL
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "AAPL"
+}
+
+###
+### Test Ticker Activity avec TSLA
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+###
+### Analyser l'activité d'un ticker avec données personnalisées
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA",
+  "data": {
+    "options_flow": {
+      "total_volume": 5000000,
+      "call_put_ratio": 9,
+      "unusual": true
+    },
+    "dark_pool": {
+      "total_volume": 10000000,
+      "largest_trade": 2000000
+    },
+    "insiders": {
+      "count": 3,
+      "net_buy_sell": "buy"
+    },
+    "short_interest": {
+      "short_interest": 50000000,
+      "float": 2000000000
+    },
+    "recent_news": [
+      "NVIDIA annonce de nouveaux partenariats",
+      "Augmentation des prévisions de revenus"
+    ],
+    "upcoming_events": [
+      "Earnings le 15/12",
+      "FDA decision le 20/12"
+    ]
+  }
+}
+
+###
+
+# ============================================
+# FINANCIAL JUICE - Analyse de Nouvelles avec OpenAI
+# ============================================
+
+### POST /ai/financial-juice/analyze - Analyser un headline Financial Juice (Taux d'intérêt)
+POST {{baseUrlMain}}/ai/financial-juice/analyze
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "headline": {
+    "title": "BREAKING: Fed raises interest rates by 0.25%",
+    "description": "Federal Reserve announces rate hike, markets react",
+    "timestamp": "2025-12-08T14:30:00Z",
+    "category": "Monetary Policy",
+    "tickers": []
+  }
+}
+
+### POST /ai/financial-juice/analyze - Analyser un headline avec ticker (Earnings)
+POST {{baseUrlMain}}/ai/financial-juice/analyze
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "headline": {
+    "title": "AAPL earnings beat expectations, stock up 5%",
+    "description": "Apple reports strong Q4 earnings, beats estimates",
+    "timestamp": "2025-12-08T16:00:00Z",
+    "category": "Earnings",
+    "tickers": ["AAPL"]
+  }
+}
+
+### POST /ai/financial-juice/analyze - Analyser un headline géopolitique (OPEC)
+POST {{baseUrlMain}}/ai/financial-juice/analyze
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "headline": {
+    "title": "OPEC announces production cut, oil prices surge",
+    "description": "OPEC+ agrees to cut production by 2M barrels per day",
+    "timestamp": "2025-12-08T10:00:00Z",
+    "category": "Commodity",
+    "tickers": []
+  }
+}
+
+### GET /ai/financial-juice/latest - Récupérer et analyser les dernières nouvelles (10 par défaut)
+GET {{baseUrlMain}}/ai/financial-juice/latest
+Authorization: Bearer {{accessToken}}
+
+### GET /ai/financial-juice/latest - Récupérer et analyser les 20 dernières nouvelles
+GET {{baseUrlMain}}/ai/financial-juice/latest?limit=20
+Authorization: Bearer {{accessToken}}
+
 ###
 

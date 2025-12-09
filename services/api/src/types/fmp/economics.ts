@@ -59,8 +59,9 @@ export interface EconomicCalendarEvent {
   estimate: number | null;
   actual: number | null;
   change: number | null;
-  impact: string; // e.g., "Low", "Medium", "High"
+  impact: string; // e.g., "Low", "Medium", "High", "None"
   changePercentage: number | null;
+  unit: string | null; // e.g., "%", "B", "M", null
 }
 
 export type EconomicCalendarResponse = EconomicCalendarEvent[];

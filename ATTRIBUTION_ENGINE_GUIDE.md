@@ -1070,3 +1070,10 @@ GET /attribution/dominant-entities/NVDA
 **Version** : 1.0  
 **Auteur** : Équipe Backend Personamy
 
+
+
+
+
+
+
+

@@ -3,8 +3,8 @@
 # Script pour corriger les holdings avec cik NULL
 # Met à jour le cik depuis la table funds
 
-SUPABASE_URL="${SUPABASE_URL:-https://nmynjtrppwhiwlxfdzdh.supabase.co}"
-SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-sb_secret_025ZPExdwYIENsABogIRsw_jDhFPTo6}"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
+SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-your-service-key}"
 
 echo "🔧 Correction des holdings avec cik NULL..."
 

@@ -32,7 +32,7 @@ resource "aws_lambda_function" "api" {
   handler          = "index.handler"
   filename         = "${path.module}/../../services/api/api.zip"                   # ← produit par npm run bundle
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip") # ← détecte automatiquement les changements
-  timeout          = 10
+  timeout          = 20  # Augmenté à 20s pour les analyses IA qui peuvent prendre du temps
   memory_size      = 512
 
   depends_on = [aws_cloudwatch_log_group.api_lambda]

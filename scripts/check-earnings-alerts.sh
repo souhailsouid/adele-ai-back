@@ -12,7 +12,7 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-SUPABASE_URL="${SUPABASE_URL:-https://nmynjtrppwhiwlxfdzdh.supabase.co}"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
 SUPABASE_KEY="${SUPABASE_SERVICE_KEY:-}"
 
 if [ -z "$SUPABASE_KEY" ]; then
@@ -61,6 +61,9 @@ else
         echo "$RESPONSE" | python3 -m json.tool 2>/dev/null | head -100 || echo "$RESPONSE" | head -20
     fi
 fi
+
+
+
 
 
 

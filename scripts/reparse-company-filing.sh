@@ -14,7 +14,7 @@ if [ -f .env ]; then
   export $(cat .env | grep -v '^#' | xargs)
 fi
 
-SUPABASE_URL="${SUPABASE_URL:-https://nmynjtrppwhiwlxfdzdh.supabase.co}"
+SUPABASE_URL="${SUPABASE_URL:-https://your-project.supabase.co}"
 SUPABASE_KEY="${SUPABASE_KEY}"
 
 if [ -z "$SUPABASE_KEY" ]; then
@@ -123,6 +123,9 @@ echo ""
 echo "💡 Pour vérifier le résultat:"
 echo "   SELECT * FROM company_events WHERE filing_id = $FILING_ID;"
 echo "   SELECT * FROM company_filings WHERE id = $FILING_ID;"
+
+
+
 
 
 

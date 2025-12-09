@@ -33,6 +33,7 @@ import { surveillanceRoutes } from "./routes/surveillance.routes";
 import { alertRoutes } from "./routes/alert.routes";
 import { smartMoneyRoutes } from "./routes/smart-money.routes";
 import { attributionRoutes } from "./routes/attribution.routes";
+import { aiAnalystRoutes } from "./routes/ai-analyst.routes";
 import { getCombinedEconomicCalendar } from "./economic-calendar";
 import { getLatest13FFilings } from "./13f-filings";
 import type { NotificationType } from "./types/unusual-whales/alerts";
@@ -470,9 +471,29 @@ const routes: Route[] = [
         method: "GET",
         path: "/economic-calendar",
         handler: async (event) => {
-          const from = getQueryParam(event, "from");
-          const to = getQueryParam(event, "to");
+          // Période par défaut : 30 jours
+          const today = new Date();
+          const defaultFrom = today.toISOString().split('T')[0];
+          const defaultTo = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 jours par défaut
+            .toISOString()
+            .split('T')[0];
+          
+          const from = getQueryParam(event, "from") || defaultFrom;
+          const to = getQueryParam(event, "to") || defaultTo;
+          
+          // Valider le format des dates (YYYY-MM-DD)
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+          if (!dateRegex.test(from) || !dateRegex.test(to)) {
+            throw new Error('Invalid date format. Use YYYY-MM-DD format.');
+          }
+          
+          // Valider que 'to' est après 'from'
+          if (new Date(to) < new Date(from)) {
+            throw new Error('End date (to) must be after start date (from).');
+          }
+          
           // Combine FMP + Unusual Whales economic calendars
+          // Les paramètres from/to sont OBLIGATOIRES pour FMP
           return await getCombinedEconomicCalendar({ from, to });
         },
       },
@@ -501,6 +522,8 @@ const routes: Route[] = [
       ...smartMoneyRoutes,
       // ========== Attribution Routes ==========
       ...attributionRoutes,
+      // ========== AI Analyst Routes ==========
+      ...aiAnalystRoutes,
       // ========== Unusual Whales API Routes ==========
       {
         method: "GET",
