@@ -44,6 +44,39 @@ resource "aws_apigatewayv2_route" "post_ai_ticker_activity_analysis" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# POST /ai/ticker-options-analysis
+resource "aws_apigatewayv2_route" "post_ai_ticker_options_analysis" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "POST /ai/ticker-options-analysis"
+
+  target = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# POST /ai/ticker-institutional-analysis
+resource "aws_apigatewayv2_route" "post_ai_ticker_institutional_analysis" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "POST /ai/ticker-institutional-analysis"
+
+  target = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# POST /ai/ticker-news-events-analysis
+resource "aws_apigatewayv2_route" "post_ai_ticker_news_events_analysis" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "POST /ai/ticker-news-events-analysis"
+
+  target = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 # POST /ai/financial-juice/analyze
 resource "aws_apigatewayv2_route" "post_ai_financial_juice_analyze" {
   api_id    = aws_apigatewayv2_api.http.id
