@@ -5,6 +5,7 @@
 
 import { UnusualWhalesRepository } from '../repositories/unusual-whales.repository';
 import { CacheService } from './cache.service';
+import { TickerDataPersistenceService } from './ticker-data-persistence.service';
 import { logger } from '../utils/logger';
 import { ApiResponse } from '../types/ticker.types';
 import { handleError } from '../utils/errors';
@@ -243,10 +244,12 @@ import type {
 export class UnusualWhalesService {
   private repository: UnusualWhalesRepository;
   private cache: CacheService;
+  private persistenceService: TickerDataPersistenceService;
 
   constructor() {
     this.repository = new UnusualWhalesRepository();
     this.cache = new CacheService({ tableName: 'unusual_whales_cache', ttlHours: 24 });
+    this.persistenceService = new TickerDataPersistenceService();
   }
 
   // ========== Institutions ==========
@@ -418,16 +421,24 @@ export class UnusualWhalesService {
   async getDarkPoolTrades(ticker: string, params?: DarkPoolTickerQueryParams): Promise<ApiResponse<DarkPoolTickerResponse['data']>> {
     return handleError(async () => {
       const log = logger.child({ operation: 'getDarkPoolTrades', ticker, params });
-      log.info('Fetching dark pool trades from API');
       
-      const response = await this.repository.getDarkPoolTrades(ticker, params);
+      // Utiliser le service de persistance qui vérifie la fraîcheur et stocke dans dark_pool_trades
+      const result = await this.persistenceService.getOrFetchDarkPool(
+        ticker,
+        async () => {
+          log.info('Fetching dark pool trades from UW API');
+          const response = await this.repository.getDarkPoolTrades(ticker, params);
+          return response.data || [];
+        },
+        24 // maxAgeHours: 24h pour dark pool
+      );
       
       return {
         success: true,
-        data: response.data,
-        cached: false,
-        count: response.data.length,
-        timestamp: new Date().toISOString(),
+        data: result.data,
+        cached: result.fromCache,
+        count: result.data.length,
+        timestamp: result.dataDate || new Date().toISOString(),
       };
     }, `Get dark pool trades for ${ticker}`);
   }
@@ -838,13 +849,15 @@ export class UnusualWhalesService {
    */
   async getInstitutionActivity(name: string, params?: InstitutionalActivityQueryParams): Promise<ApiResponse<InstitutionalActivityResponse['data']>> {
     return handleError(async () => {
-      const cacheKey = `uw_institution_activity_${name}_${JSON.stringify(params)}`;
-      const cached = await this.cache.get<InstitutionalActivityResponse['data']>(cacheKey, 'cache_key');
-      if (cached) {
-        return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
-      }
+      // const cacheKey = `uw_institution_activity_${name}_${JSON.stringify(params)}`;
+      // const cached = await this.cache.get<InstitutionalActivityResponse['data']>(cacheKey, 'cache_key');
+      // if (cached) {
+      //   return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
+      // }
       const response = await this.repository.getInstitutionalActivity(name, params);
-      await this.cache.set(cacheKey, response.data as any, 'cache_key', 24); // Cache for 24 hours
+      console.log('response', response);
+      
+      // await this.cache.set(cacheKey, response.data as any, 'cache_key', 24); // Cache for 24 hours
       return { success: true, data: response.data, cached: false, count: response.data.length, timestamp: new Date().toISOString() };
     }, `Get institutional activity for ${name}`);
   }
@@ -1326,14 +1339,26 @@ export class UnusualWhalesService {
    */
   async getRecentFlows(ticker: string, params?: RecentFlowsQueryParams): Promise<ApiResponse<RecentFlowsResponse['data']>> {
     return handleError(async () => {
-      const cacheKey = `uw_recent_flows_${ticker}_${JSON.stringify(params)}`;
-      const cached = await this.cache.get<RecentFlowsResponse['data']>(cacheKey, 'cache_key');
-      if (cached) {
-        return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
-      }
-      const response = await this.repository.getRecentFlows(ticker, params);
-      await this.cache.set(cacheKey, response.data as any, 'cache_key', 24);
-      return { success: true, data: response.data, cached: false, count: response.data.length, timestamp: new Date().toISOString() };
+      const log = logger.child({ operation: 'getRecentFlows', ticker, params });
+      
+      // Utiliser le service de persistance qui vérifie la fraîcheur et stocke dans options_flow
+      const result = await this.persistenceService.getOrFetchOptionsFlow(
+        ticker,
+        async () => {
+          log.info('Fetching recent flows from UW API');
+          const response = await this.repository.getRecentFlows(ticker, params);
+          return response.data || [];
+        },
+        1 // maxAgeHours: 1h pour options flow (change rapidement)
+      );
+      
+      return {
+        success: true,
+        data: result.data,
+        cached: result.fromCache,
+        count: result.data.length,
+        timestamp: result.dataDate || new Date().toISOString(),
+      };
     }, `Get recent flows for ${ticker}`);
   }
 
@@ -1906,14 +1931,26 @@ export class UnusualWhalesService {
    */
   async getShortInterestAndFloat(ticker: string, params?: ShortInterestAndFloatQueryParams): Promise<ApiResponse<ShortInterestAndFloatResponse['data']>> {
     return handleError(async () => {
-      const cacheKey = `uw_short_interest_float_${ticker}`;
-      const cached = await this.cache.get<ShortInterestAndFloatResponse['data']>(cacheKey, 'cache_key');
-      if (cached) {
-        return { success: true, data: cached, cached: true, count: 1, timestamp: new Date().toISOString() };
-      }
-      const response = await this.repository.getShortInterestAndFloat(ticker, params);
-      await this.cache.set(cacheKey, response.data as any, 'cache_key', 24);
-      return { success: true, data: response.data, cached: false, count: 1, timestamp: new Date().toISOString() };
+      const log = logger.child({ operation: 'getShortInterestAndFloat', ticker, params });
+      
+      // Utiliser le service de persistance qui vérifie la fraîcheur et stocke dans short_interest
+      const result = await this.persistenceService.getOrFetchShortInterest(
+        ticker,
+        async () => {
+          log.info('Fetching short interest from UW API');
+          const response = await this.repository.getShortInterestAndFloat(ticker, params);
+          return response.data || null;
+        },
+        24 // maxAgeHours: 24h pour short interest
+      );
+      
+      return {
+        success: true,
+        data: result.data,
+        cached: result.fromCache,
+        count: result.data ? 1 : 0,
+        timestamp: result.dataDate || new Date().toISOString(),
+      };
     }, `Get short interest and float for ${ticker}`);
   }
 
@@ -2051,9 +2088,16 @@ export class UnusualWhalesService {
   async getOptionTradeFlowAlerts(params?: OptionTradeFlowAlertsQueryParams): Promise<ApiResponse<OptionTradeFlowAlertsResponse['data']>> {
     return handleError(async () => {
       const cacheKey = `uw_option_trade_flow_alerts_${JSON.stringify(params || {})}`;
-      const cached = await this.cache.get<OptionTradeFlowAlertsResponse['data']>(cacheKey, 'cache_key');
+      const cached = await this.cache.get<any>(cacheKey, 'cache_key');
       if (cached) {
-        return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
+        // Le cache retourne l'objet entier de la table unusual_whales_cache
+        // Structure: { id, cache_key, data (JSONB), data_date, cached_at, expires_at }
+        // Extraire le champ 'data' qui contient le tableau
+        const cachedData = cached.data;
+        if (Array.isArray(cachedData)) {
+          return { success: true, data: cachedData, cached: true, count: cachedData.length, timestamp: new Date().toISOString() };
+        }
+        // Si cached.data n'est pas un tableau, ignorer le cache et refetch
       }
       const response = await this.repository.getOptionTradeFlowAlerts(params);
       await this.cache.set(cacheKey, response.data as any, 'cache_key', 1);

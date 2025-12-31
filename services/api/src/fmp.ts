@@ -381,6 +381,24 @@ export async function getFMPHistoricalPriceEODFullCommodity(params: {
 }) {
   return await fmpService.getHistoricalPriceEODFullCommodity(params);
 }
+
+// ========== Historical Price EOD (stocks / generic) ==========
+
+export async function getFMPHistoricalPriceEODLight(params: {
+  symbol: string;
+  from?: string;
+  to?: string;
+}) {
+  return await fmpService.getLightChart(params);
+}
+
+export async function getFMPHistoricalPriceEODFull(params: {
+  symbol: string;
+  from?: string;
+  to?: string;
+}) {
+  return await fmpService.getFullChart(params);
+}
 // need subscription
 export async function getFMPHistoricalChart1MinCommodity(params: {
   symbol: string;
@@ -520,6 +538,8 @@ export async function getFMPSMA(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getSMA(params);
 }
@@ -528,6 +548,8 @@ export async function getFMPEMA(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getEMA(params);
 }
@@ -536,6 +558,8 @@ export async function getFMPWMA(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getWMA(params);
 }
@@ -544,6 +568,8 @@ export async function getFMPDEMA(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getDEMA(params);
 }
@@ -552,6 +578,8 @@ export async function getFMPTEMA(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getTEMA(params);
 }
@@ -560,6 +588,8 @@ export async function getFMPRSI(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getRSI(params);
 }
@@ -568,6 +598,8 @@ export async function getFMPStandardDeviation(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getStandardDeviation(params);
 }
@@ -576,6 +608,8 @@ export async function getFMPWilliams(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getWilliams(params);
 }
@@ -584,6 +618,8 @@ export async function getFMPADX(params: {
   symbol: string;
   periodLength: number;
   timeframe: string;
+  from?: string;
+  to?: string;
 }) {
   return await fmpService.getADX(params);
 }

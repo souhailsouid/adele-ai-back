@@ -46,3 +46,9 @@ output "fmp_api_url" {
   value       = "https://financialmodelingprep.com/stable"
   description = "URL de base de l'API Financial Modeling Prep"
 }
+
+
+output "collector_rss_url" {
+  value       = aws_lambda_function.collector_rss.function_name
+  description = "Nom de la Lambda collector RSS"
+}

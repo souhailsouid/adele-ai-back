@@ -331,23 +331,218 @@ export interface TickerActivityAnalysisRequest {
     institutional_ownership?: any;
     recent_news?: string[];
     upcoming_events?: string[];
+    price_action?: {
+      current_price: number;
+      price_change_pct: number | null;
+      volume: number | null;
+    } | null;
+    meta?: {
+      options_flow_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      dark_pool_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      insiders_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      short_interest_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      institutional_ownership_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      price_status: 'ok' | 'timeout' | 'error' | 'invalid_shape' | 'invalid_data';
+      fetched_at: string;
+    };
   };
 }
 
 export interface TickerActivityAnalysisResponse {
   success: boolean;
   ticker: string;
+  price_data?: {
+    current_price: number | null;
+    price_change_pct: number | null;
+    volume: number | null;
+    sentiment: "haussière" | "baissière" | "neutre";
+    trend: "bullish" | "bearish" | "neutral";
+  };
   analysis: {
     overview: string; // Vue d'ensemble de l'activité
-    key_signals: Array<{
-      type: string;
+    convergent_signals?: Array<{
+      type: "options_flow" | "dark_pool" | "insiders" | "short_interest" | "institutional";
       description: string;
+      strength: ImpactLevel;
+      evidence?: string[];
+    }>;
+    divergent_signals?: Array<{
+      type: "options_flow" | "dark_pool" | "insiders" | "short_interest" | "institutional";
+      description: string;
+      interpretation: string;
+    }>;
+    trading_opportunities?: Array<{
+      type: "long" | "short" | "neutral" | "avoid";
+      description: string;
+      entry_strategy: string;
+      risk_level: "faible" | "moyen" | "élevé";
+      time_horizon: "intraday" | "1-3 days" | "1 week" | "1 month";
+    }>;
+    risks?: Array<{
+      type: "short_squeeze" | "iv_crush" | "max_pain" | "earnings" | "other";
+      description: string;
+      probability: "faible" | "moyen" | "élevé";
+      mitigation: string;
+    }>;
+    key_insights?: Array<{
+      insight: string;
       impact: ImpactLevel;
     }>;
     attention_level: ImpactLevel;
     narrative: string; // Récit humain de ce qui se passe
     recommendations?: string[];
   };
+  cached: boolean;
+  timestamp: string;
+}
+
+// ========== Flow Options Analysis (Pro Analysis) ==========
+
+/**
+ * Signal de flow options à analyser
+ * Basé sur les données de l'API Unusual Whales flow-alerts
+ */
+export interface FlowOptionsSignal {
+  /** Ticker */
+  ticker: string;
+  /** Type de contrat */
+  type: 'call' | 'put';
+  /** Strike */
+  strike: string | number;
+  /** Date d'expiration */
+  expiry: string;
+  /** Prime totale engagée */
+  total_premium: number | string | null;
+  /** Taille totale */
+  total_size: number | string | null;
+  /** Nombre de transactions */
+  trade_count: number | string | null;
+  /** Volume */
+  volume: number | string | null;
+  /** Open Interest */
+  open_interest: number | string | null;
+  /** Ratio volume/OI */
+  volume_oi_ratio: number | string | null;
+  /** Prix sous-jacent */
+  underlying_price: number | string | null;
+  /** Règle d'alerte déclenchée */
+  alert_rule?: string;
+  /** Toutes les transactions sont des ouvertures */
+  all_opening_trades?: boolean;
+  /** A un floor trade */
+  has_floor?: boolean;
+  /** A un sweep */
+  has_sweep?: boolean;
+  /** Trade multi-leg */
+  has_multileg?: boolean;
+  /** Timestamp de création */
+  created_at?: string;
+  /** Prime côté ask */
+  total_ask_side_prem?: number | string | null;
+  /** Prime côté bid */
+  total_bid_side_prem?: number | string | null;
+  /** Données brutes (pour extraire next_earnings_date, etc.) */
+  data?: any;
+}
+
+/**
+ * Requête pour analyser un signal de flow options
+ */
+export interface FlowOptionsAnalysisProRequest {
+  /** Signal(s) à analyser (optionnel si ticker fourni) */
+  signals?: FlowOptionsSignal[];
+  /** Ticker à analyser (si fourni sans signals, les données seront chargées depuis la DB) */
+  ticker?: string;
+  /** Contexte optionnel (earnings proches, news, etc.) */
+  context?: {
+    days_to_earnings?: number;
+    recent_news?: string[];
+    price_trend?: 'up' | 'down' | 'neutral';
+  };
+  /** Seuil minimum de premium pour filtrer les clusters (défaut: 100000) */
+  min_premium_threshold?: number;
+  /** Limite pour charger depuis la DB (défaut: 500) */
+  limit?: number;
+  /** Prime minimum pour charger depuis la DB (défaut: 50000) */
+  min_premium?: number;
+}
+
+/**
+ * Cluster de flow options (regroupement par type, expiry, strike)
+ */
+export interface FlowOptionsCluster {
+  /** Ticker */
+  ticker: string;
+  /** Type de contrat */
+  type: 'call' | 'put';
+  /** Strike */
+  strike: string | number;
+  /** Date d'expiration */
+  expiry: string;
+  /** Prime totale agrégée */
+  premium_total: number;
+  /** Nombre total de transactions */
+  trades_total: number;
+  /** Taille totale agrégée */
+  size_total: number;
+  /** Prime totale côté ask */
+  ask_prem_total: number;
+  /** Prime totale côté bid */
+  bid_prem_total: number;
+  /** Ratio ask / (ask + bid) */
+  ask_ratio: number | 'unknown';
+  /** Direction bias (ask - bid) */
+  direction_bias: number;
+  /** Ratio volume/OI maximum */
+  volume_oi_ratio_max: number;
+  /** Prix sous-jacent (moyen ou dernier) */
+  underlying_price: number | null;
+  /** Jours jusqu'à expiration (calculé depuis created_at le plus récent) */
+  days_to_expiry: number | null;
+  /** Horizon temporel */
+  time_horizon: 'short' | 'swing' | 'long';
+  /** Nombre d'alertes dans ce cluster */
+  alert_count: number;
+  /** Dates de création des alertes */
+  created_dates: string[];
+  /** Indicateur d'ouverture (majorité des alertes) */
+  opening_hint: boolean;
+  /** Règles d'alerte présentes */
+  alert_rules: string[];
+  /** Prochain earnings date (si disponible dans data) */
+  next_earnings_date?: string | null;
+}
+
+/**
+ * Réponse d'analyse professionnelle d'un signal de flow options
+ * Version clusterisée (analyse par cluster, pas par alerte individuelle)
+ */
+export interface FlowOptionsAnalysisProResponse {
+  success: boolean;
+  ticker: string;
+  /** Nombre de clusters analysés */
+  clusters_analyzed: number;
+  /** Clusters analysés (maximum 5, triés par premium_total décroissant) */
+  clusters: Array<{
+    /** Cluster analysé */
+    cluster: FlowOptionsCluster;
+    /** Label du cluster */
+    label: string;
+    /** Importance (calculée de manière déterministe, pas par l'IA) */
+    importance: 'faible' | 'moyen' | 'fort' | 'tres_fort';
+    /** Intention probable (déterminée par l'IA) */
+    intent: 'directional' | 'hedge' | 'unclear';
+    /** Qualité du signal (déterminée par l'IA) */
+    quality: 'high' | 'medium' | 'low';
+    /** Action recommandée (calculée de manière déterministe, pas par l'IA) */
+    action: 'IGNORE' | 'WATCH' | 'INVESTIGATE';
+    /** Tag optionnel pour catégoriser le signal (ex: HIGH_NOISE_EXCEPTION) */
+    tag?: 'HIGH_NOISE' | 'HIGH_NOISE_EXCEPTION' | 'HEDGE_LIKE' | 'SHORT_TERM';
+    /** Raisons (2-3 points factuels de l'IA) */
+    why: string[];
+  }>;
+  /** Résumé en un paragraphe */
+  summary: string;
   cached: boolean;
   timestamp: string;
 }

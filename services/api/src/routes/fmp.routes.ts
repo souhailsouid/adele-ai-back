@@ -1051,8 +1051,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPSMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPSMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1062,8 +1064,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1073,8 +1077,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPWMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPWMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1084,8 +1090,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPDEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPDEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1095,8 +1103,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPTEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPTEMA({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1106,8 +1116,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPRSI({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPRSI({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1117,8 +1129,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPStandardDeviation({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPStandardDeviation({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1128,8 +1142,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPWilliams({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPWilliams({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
   {
@@ -1139,8 +1155,10 @@ export const fmpRoutes: Route[] = [
       const symbol = getPathParam(event, "symbol");
       const periodLength = getQueryParam(event, "periodLength");
       const timeframe = getQueryParam(event, "timeframe");
+      const from = getQueryParam(event, "from");
+      const to = getQueryParam(event, "to");
       if (!symbol || !periodLength || !timeframe) throw new Error("Missing required parameters: symbol, periodLength, and timeframe");
-      return await fmp.getFMPADX({ symbol, periodLength: parseInt(periodLength, 10), timeframe });
+      return await fmp.getFMPADX({ symbol, periodLength: parseInt(periodLength, 10), timeframe, from, to });
     },
   },
     // ========== ETF & Mutual Funds ==========

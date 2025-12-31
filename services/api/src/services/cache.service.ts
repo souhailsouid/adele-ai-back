@@ -72,7 +72,7 @@ export class CacheService {
    */
   async set<T extends Record<string, any>>(
     key: string,
-    data: T,
+    data: T | T[],
     keyField: string = 'ticker',
     ttlHours?: number
   ): Promise<void> {
@@ -80,9 +80,13 @@ export class CacheService {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + ttl);
 
+    // Si data est un array, le stocker dans un champ JSONB 'data'
+    // Sinon, spreader les propriétés
+    const isArray = Array.isArray(data);
     const cacheEntry = {
       [keyField]: key.toUpperCase(),
-      ...data,
+      ...(isArray ? {} : data), // Ne spreader que si ce n'est pas un array
+      ...(isArray ? { data: data as any } : {}), // Stocker l'array dans 'data' si c'est un array
       expires_at: expiresAt.toISOString(),
       cached_at: new Date().toISOString(),
     };
@@ -96,7 +100,7 @@ export class CacheService {
         throw new CacheError(`Failed to set cache: ${error.message}`, error);
       }
 
-      logger.debug(`Cached ${key} in ${this.options.tableName}`, { ttlHours: ttl });
+      logger.debug(`Cached ${key} in ${this.options.tableName}`, { ttlHours: ttl, isArray });
     } catch (error) {
       logger.error(`Cache set failed for ${key}`, error);
       // Ne pas throw pour ne pas faire échouer l'opération principale

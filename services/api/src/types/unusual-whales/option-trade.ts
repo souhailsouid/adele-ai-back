@@ -27,6 +27,8 @@ export type AlertRuleName =
  * GET /option-trades/flow-alerts
  */
 export interface FlowAlert {
+  /** ID unique de l'alerte (UUID) - identifiant unique de chaque flow alert */
+  id?: string; // Ex: "3da34725-d91e-4ad6-bb32-e259bdc8652d"
   /** Nom de la règle d'alerte */
   alert_rule: AlertRuleName; // Ex: "RepeatedHits"
   /** Toutes les transactions sont des transactions d'ouverture basées sur OI, Size & Volume */

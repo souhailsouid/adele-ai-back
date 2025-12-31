@@ -14,7 +14,9 @@ resource "aws_apigatewayv2_api" "http_data" {
   description   = "API Gateway pour les routes de données brutes (FMP et Unusual Whales)"
   protocol_type = "HTTP"
   cors_configuration {
-    allow_origins  = var.frontend_allowed_origins
+    # CORS: autoriser toutes les origines (Swagger, localhost, etc.)
+    # Si tu veux restreindre plus tard, remets var.frontend_allowed_origins ici.
+    allow_origins  = ["*"]
     allow_methods  = ["GET", "POST", "PATCH", "OPTIONS"]
     allow_headers  = ["authorization", "content-type"]
     expose_headers = ["*"]

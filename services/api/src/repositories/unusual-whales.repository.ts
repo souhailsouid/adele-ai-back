@@ -1249,9 +1249,9 @@ export class UnusualWhalesRepository {
       
       const queryString = queryParams.toString();
       const endpoint = `/institution/${encodeURIComponent(name)}/activity${queryString ? `?${queryString}` : ''}`;
-      
+      console.log('endpoint', endpoint);
       const response = await this.client.get<InstitutionalActivityResponse>(endpoint);
-      
+      console.log('response_from_repository', response);
       if (!response || !response.data || !Array.isArray(response.data)) {
         throw new ExternalApiError('Unusual Whales', 'Invalid response format from /institution/{name}/activity endpoint');
       }
@@ -1452,9 +1452,9 @@ export class UnusualWhalesRepository {
       const queryParams = new URLSearchParams();
       
       if (params) {
-        // limit - Number (1-500, défaut: 500)
+        // limit - Number (1-1000, défaut: 500)
         if (params.limit !== undefined) {
-          queryParams.append('limit', String(Math.min(Math.max(params.limit, 1), 500)));
+          queryParams.append('limit', String(Math.min(Math.max(params.limit, 1), 1000)));
         }
         
         // max_share_value - String

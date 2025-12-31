@@ -907,6 +907,34 @@ export class FMPService {
       };
     }, `Get full chart for commodity ${params.symbol}`);
   }
+
+  // ========== Historical Price EOD (stocks / generic) ==========
+
+  async getLightChart(params: { symbol: string; from?: string; to?: string }): Promise<ApiResponse<any[]>> {
+    return handleError(async () => {
+      const data = await this.repository.getLightChart(params);
+      return {
+        success: true,
+        data,
+        cached: false,
+        count: data.length,
+        timestamp: new Date().toISOString(),
+      };
+    }, `Get light chart for ${params.symbol}`);
+  }
+
+  async getFullChart(params: { symbol: string; from?: string; to?: string }): Promise<ApiResponse<any[]>> {
+    return handleError(async () => {
+      const data = await this.repository.getFullChart(params);
+      return {
+        success: true,
+        data,
+        cached: false,
+        count: data.length,
+        timestamp: new Date().toISOString(),
+      };
+    }, `Get full chart for ${params.symbol}`);
+  }
 // need subscription
   async getHistoricalChart1MinCommodity(params: {
     symbol: string;
@@ -1181,6 +1209,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getSMA(params);
@@ -1198,6 +1228,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getEMA(params);
@@ -1215,6 +1247,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getWMA(params);
@@ -1232,6 +1266,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getDEMA(params);
@@ -1249,6 +1285,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getTEMA(params);
@@ -1266,6 +1304,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getRSI(params);
@@ -1283,6 +1323,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getStandardDeviation(params);
@@ -1300,6 +1342,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getWilliams(params);
@@ -1317,6 +1361,8 @@ export class FMPService {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<ApiResponse<any[]>> {
     return handleError(async () => {
       const data = await this.repository.getADX(params);

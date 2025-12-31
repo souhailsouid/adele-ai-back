@@ -865,8 +865,10 @@ export class FMPRepository {
       if (params.from) queryParams.from = params.from;
       if (params.to) queryParams.to = params.to;
       
-      const response = await this.client.get<any[]>(`/historical-price-eod/light`, queryParams);
-      return Array.isArray(response) ? response : [];
+      const response: any = await this.client.get<any>(`/historical-price-eod/light`, queryParams);
+      if (Array.isArray(response)) return response;
+      if (response && typeof response === 'object' && Array.isArray(response.historical)) return response.historical;
+      return [];
     }, `Get light chart for ${params.symbol}`);
   }
 
@@ -878,8 +880,10 @@ export class FMPRepository {
       if (params.from) queryParams.from = params.from;
       if (params.to) queryParams.to = params.to;
       
-      const response = await this.client.get<any[]>(`/historical-price-eod/full`, queryParams);
-      return Array.isArray(response) ? response : [];
+      const response: any = await this.client.get<any>(`/historical-price-eod/full`, queryParams);
+      if (Array.isArray(response)) return response;
+      if (response && typeof response === 'object' && Array.isArray(response.historical)) return response.historical;
+      return [];
     }, `Get full chart for ${params.symbol}`);
   }
 
@@ -1136,13 +1140,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/sma`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/sma`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get SMA for ${params.symbol}`);
   }
@@ -1151,13 +1160,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/ema`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/ema`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get EMA for ${params.symbol}`);
   }
@@ -1166,13 +1180,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/wma`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/wma`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get WMA for ${params.symbol}`);
   }
@@ -1181,13 +1200,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/dema`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/dema`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get DEMA for ${params.symbol}`);
   }
@@ -1196,13 +1220,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/tema`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/tema`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get TEMA for ${params.symbol}`);
   }
@@ -1211,13 +1240,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/rsi`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/rsi`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get RSI for ${params.symbol}`);
   }
@@ -1226,13 +1260,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/standarddeviation`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/standarddeviation`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get Standard Deviation for ${params.symbol}`);
   }
@@ -1241,13 +1280,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/williams`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/williams`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get Williams for ${params.symbol}`);
   }
@@ -1256,13 +1300,18 @@ export class FMPRepository {
     symbol: string;
     periodLength: number;
     timeframe: string;
+    from?: string;
+    to?: string;
   }): Promise<any[]> {
     return handleError(async () => {
-      const response = await this.client.get<any[]>(`/technical-indicators/adx`, {
+      const queryParams: Record<string, string> = {
         symbol: params.symbol.toUpperCase(),
         periodLength: String(params.periodLength),
         timeframe: params.timeframe,
-      });
+      };
+      if (params.from) queryParams.from = params.from;
+      if (params.to) queryParams.to = params.to;
+      const response = await this.client.get<any[]>(`/technical-indicators/adx`, queryParams);
       return Array.isArray(response) ? response : [];
     }, `Get ADX for ${params.symbol}`);
   }

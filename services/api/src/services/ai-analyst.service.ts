@@ -6,6 +6,7 @@
 import { logger } from '../utils/logger';
 import { handleError } from '../utils/errors';
 import { supabase } from '../supabase';
+import { createHash } from 'crypto';
 import type {
   ImpactLevel,
   AIAnalysisResult,
@@ -35,13 +36,37 @@ export class AIAnalystService {
         const log = logger.child({ operation: 'analyzeCalendarSummary' });
       log.info('Analyzing calendar summary', { date_range: request.date_range });
 
-      // Vérifier le cache
-      const cacheKey = `calendar_summary_${request.date_range.from}_${request.date_range.to}`;
-      const cached = await this.getCachedAnalysis(cacheKey);
+      // Générer un hash des événements pour détecter si les données ont changé
+      const eventsHash = this.generateDataHash({
+        events: request.events?.map((e: any) => ({
+          ticker: e.ticker,
+          type: e.type,
+          description: e.description,
+          date: e.date,
+          impact: e.impact,
+        })) || [],
+      });
+      const cacheKey = `calendar_summary_${request.date_range.from}_${request.date_range.to}_${eventsHash}`;
+      
+      // Vérifier le cache avec le hash des événements
+      const cached = await this.getCachedAnalysis(cacheKey, eventsHash);
       if (cached) {
-        log.info('Returning cached calendar summary');
-        return cached as CalendarSummaryResponse;
+        log.info('Returning cached calendar summary (events unchanged)', { 
+          from: request.date_range.from,
+          to: request.date_range.to,
+          eventsHash 
+        });
+        return {
+          ...cached as CalendarSummaryResponse,
+          cached: true,
+        };
       }
+
+      log.info('No cache found or events changed, generating new analysis', { 
+        from: request.date_range.from,
+        to: request.date_range.to,
+        eventsHash 
+      });
 
       // Vérifier qu'il y a des événements
       if (!request.events || request.events.length === 0) {
@@ -284,8 +309,8 @@ ${JSON.stringify(topEvents, null, 2)}`;
         timestamp: new Date().toISOString(),
       };
 
-      // Mettre en cache
-      await this.cacheAnalysis(cacheKey, response);
+      // Mettre en cache avec hash des holdings (cache long: 24h si données identiques)
+      await this.cacheAnalysis(cacheKey, response, 86400); // 24h
 
       return response;
       },
@@ -304,13 +329,27 @@ ${JSON.stringify(topEvents, null, 2)}`;
         const log = logger.child({ operation: 'analyzeOptionsFlow', ticker: request.ticker });
       log.info('Analyzing options flow', { signal_type: request.signal_type });
 
-      // Vérifier le cache
-      const cacheKey = `options_flow_${request.ticker}_${request.signal_type}_${Date.now()}`;
-      const cached = await this.getCachedAnalysis(cacheKey);
+      // Générer un hash des métriques pour détecter si les données ont changé
+      const metricsHash = this.generateDataHash(request.metrics || {});
+      const cacheKey = `options_flow_${request.ticker}_${request.signal_type}_${metricsHash}`;
+      
+      // Vérifier le cache avec le hash des données
+      const cached = await this.getCachedAnalysis(cacheKey, metricsHash);
       if (cached) {
-        log.info('Returning cached options flow analysis');
-        return cached as OptionsFlowAnalysisResponse;
+        log.info('Returning cached options flow analysis (data unchanged)', { 
+          ticker: request.ticker,
+          metricsHash 
+        });
+        return {
+          ...cached as OptionsFlowAnalysisResponse,
+          cached: true,
+        };
       }
+
+      log.info('No cache found or data changed, generating new analysis', { 
+        ticker: request.ticker,
+        metricsHash 
+      });
 
       const systemPrompt = `Tu es un analyste de trading d'options expérimenté avec 20 ans d'expérience.
 
@@ -468,8 +507,8 @@ ${request.context ? JSON.stringify(request.context, null, 2) : 'Aucun contexte s
         timestamp: new Date().toISOString(),
       };
 
-      // Mettre en cache (cache court: 1h)
-      await this.cacheAnalysis(cacheKey, response, 3600);
+      // Mettre en cache avec hash des métriques (cache long: 24h si données identiques)
+      await this.cacheAnalysis(cacheKey, response, 86400); // 24h
 
       return response;
       },
@@ -654,8 +693,8 @@ ${JSON.stringify(topHoldings, null, 2)}`;
         timestamp: new Date().toISOString(),
       };
 
-      // Mettre en cache
-      await this.cacheAnalysis(cacheKey, response);
+      // Mettre en cache avec hash des holdings (cache long: 24h si données identiques)
+      await this.cacheAnalysis(cacheKey, response, 86400); // 24h
 
       return response;
       },
@@ -675,58 +714,151 @@ ${JSON.stringify(topHoldings, null, 2)}`;
           operation: 'analyzeTickerActivity',
           ticker: request.ticker,
         });
-      log.info('Analyzing ticker activity');
+      log.info('Analyzing ticker activity', { ticker: request.ticker });
 
-      // Vérifier le cache
-      const cacheKey = `ticker_activity_${request.ticker}_${Date.now()}`;
-      const cached = await this.getCachedAnalysis(cacheKey);
+      // Générer un hash des données d'entrée pour détecter si les données ont changé
+      // IMPORTANT: Inclure le ticker dans le hash pour éviter les collisions entre tickers
+      const dataHash = this.generateDataHash({
+        ticker: request.ticker,
+        data: request.data,
+      });
+      const cacheKey = `ticker_activity_${request.ticker.toUpperCase()}_${dataHash}`;
+      
+      // Vérifier le cache avec le hash des données (incluant le ticker)
+      const cached = await this.getCachedAnalysis(cacheKey, dataHash, request.ticker);
       if (cached) {
-        log.info('Returning cached ticker activity analysis');
-        return cached as TickerActivityAnalysisResponse;
+        // Vérifier que le ticker correspond (sécurité supplémentaire)
+        const cachedResponse = cached as TickerActivityAnalysisResponse;
+        if (cachedResponse.ticker?.toUpperCase() === request.ticker.toUpperCase()) {
+          log.info('Returning cached ticker activity analysis (data unchanged)', { 
+            ticker: request.ticker,
+            dataHash 
+          });
+          return {
+            ...cachedResponse,
+            cached: true,
+          };
+        } else {
+          log.warn('Cache hit but ticker mismatch, invalidating and generating new analysis', {
+            requested: request.ticker,
+            cached: cachedResponse.ticker,
+          });
+          // Invalider le cache incorrect
+          await this.invalidateCache(cacheKey);
+        }
       }
 
-      // Résumer les données avant d'envoyer à l'IA (optimisation coûts)
-      const summarizedData = {
-        options_flow: request.data.options_flow
-          ? {
-              total_volume: request.data.options_flow.total_volume,
-              call_put_ratio: request.data.options_flow.call_put_ratio,
-              unusual: request.data.options_flow.unusual,
-            }
-          : null,
-        dark_pool: request.data.dark_pool
-          ? {
-              total_volume: request.data.dark_pool.total_volume,
-              largest_trade: request.data.dark_pool.largest_trade,
-            }
-          : null,
-        insiders: request.data.insiders
-          ? {
-              count: request.data.insiders.length,
-              net_buy_sell: request.data.insiders.net_buy_sell,
-            }
-          : null,
-        short_interest: request.data.short_interest || null,
-        recent_news: request.data.recent_news?.slice(0, 5) || [],
+      log.info('No cache found or data changed, generating new analysis', { 
+        ticker: request.ticker,
+        dataHash 
+      });
+
+      // Utiliser toutes les données enrichies
+      const enrichedData = {
+        options_flow: request.data.options_flow ? {
+          total_volume: request.data.options_flow.total_volume,
+          call_put_ratio: request.data.options_flow.call_put_ratio,
+          unusual: request.data.options_flow.unusual,
+          open_interest_change: request.data.options_flow.open_interest_change,
+          implied_volatility: request.data.options_flow.implied_volatility,
+          volume_profile: request.data.options_flow.volume_profile,
+          unusual_activity: request.data.options_flow.unusual_activity,
+          max_pain: request.data.options_flow.max_pain,
+        } : null,
+        dark_pool: request.data.dark_pool ? {
+          total_volume: request.data.dark_pool.total_volume,
+          largest_trade: request.data.dark_pool.largest_trade,
+          institutions: request.data.dark_pool.institutions,
+        } : null,
+        insiders: request.data.insiders ? {
+          count: request.data.insiders.count,
+          net_buy_sell: request.data.insiders.net_buy_sell,
+          buys: request.data.insiders.buys,
+          sells: request.data.insiders.sells,
+          total_value: request.data.insiders.total_value,
+        } : null,
+        short_interest: request.data.short_interest ? {
+          short_interest: request.data.short_interest.short_interest,
+          float: request.data.short_interest.float,
+          ratio: request.data.short_interest.ratio,
+          days_to_cover: request.data.short_interest.days_to_cover,
+        } : null,
+        institutional_ownership: request.data.institutional_ownership ? {
+          total_shares: request.data.institutional_ownership.total_shares,
+          changes: request.data.institutional_ownership.changes,
+        } : null,
+        price_action: request.data.price_action || null,
+        recent_news: request.data.recent_news?.slice(0, 10) || [],
         upcoming_events: request.data.upcoming_events || [],
+        meta: request.data.meta || undefined, // Métadonnées de statut pour l'IA
       };
 
-      const systemPrompt = `Tu es un analyste de marché expérimenté.
+      const systemPrompt = `Tu es un analyste de marché expérimenté spécialisé dans l'analyse multi-signaux.
 
-Analyse l'activité globale d'un ticker et génère un récit humain de ce qui se passe.
+Analyse l'activité globale d'un ticker en croisant TOUTES les données disponibles :
+- **Price Action** (prix actuel, variation %, volume) - CRITIQUE pour déterminer le sentiment (haussière/baissière/neutre)
+- Options Flow (volume, OI changes, IV, sweeps/blocks, max pain)
+- Dark Pool (volume, institutions, patterns)
+- Insiders (transactions, net buy/sell, valeurs)
+- Short Interest (ratio, days to cover, trends)
+- Institutional Ownership (changements récents)
+- News & Events (earnings, FDA, etc.)
+
+**IMPORTANT**: Utilise le prix actuel et sa variation pour déterminer le sentiment de marché :
+- Prix en hausse > 0.5% → Sentiment haussier
+- Prix en baisse < -0.5% → Sentiment baissier
+- Variation entre -0.5% et +0.5% → Sentiment neutre
+
+Génère une analyse complète et actionnable qui identifie :
+1. Le sentiment de marché basé sur le prix actuel et sa variation
+2. Les signaux convergents (plusieurs signaux pointent dans la même direction)
+3. Les signaux divergents (contradictions à surveiller)
+4. Les opportunités de trading (entry/exit points)
+5. Les risques (short squeeze, IV crush, etc.)
 
 Structure ta réponse en JSON:
 {
-  "overview": "Vue d'ensemble en 4-5 lignes",
-  "key_signals": [
+  "overview": "Vue d'ensemble en 5-7 lignes avec synthèse des signaux",
+  "convergent_signals": [
     {
-      "type": "options_flow" | "dark_pool" | "insiders" | "short_interest",
-      "description": "Description du signal",
-      "impact": "faible" | "moyen" | "élevé" | "critique"
+      "type": "options_flow ou dark_pool ou insiders ou short_interest ou institutional",
+      "description": "Description détaillée du signal",
+      "strength": "faible ou moyen ou élevé ou critique",
+      "evidence": ["preuve 1", "preuve 2"]
     }
   ],
-  "attention_level": "faible" | "moyen" | "élevé" | "critique",
-  "narrative": "Récit humain de ce qui se passe (5-7 lignes, style professionnel)",
+  "divergent_signals": [
+    {
+      "type": "options_flow ou dark_pool ou insiders ou short_interest ou institutional",
+      "description": "Contradiction observée",
+      "interpretation": "Ce que cela peut signifier"
+    }
+  ],
+  "trading_opportunities": [
+    {
+      "type": "long ou short ou neutral ou avoid",
+      "description": "Opportunité identifiée",
+      "entry_strategy": "Stratégie d'entrée",
+      "risk_level": "faible ou moyen ou élevé",
+      "time_horizon": "intraday ou 1-3 days ou 1 week ou 1 month"
+    }
+  ],
+  "risks": [
+    {
+      "type": "short_squeeze ou iv_crush ou max_pain ou earnings ou other",
+      "description": "Risque identifié",
+      "probability": "faible ou moyen ou élevé",
+      "mitigation": "Comment se protéger"
+    }
+  ],
+  "key_insights": [
+    {
+      "insight": "Insight clé",
+      "impact": "faible ou moyen ou élevé ou critique"
+    }
+  ],
+  "attention_level": "faible ou moyen ou élevé ou critique",
+  "narrative": "Récit humain de ce qui se passe (5-7 lignes)",
   "recommendations": ["recommandation 1", "recommandation 2"]
 }
 
@@ -734,8 +866,10 @@ Sois concis mais actionnable. Toujours en français.`;
 
       const userPrompt = `Ticker: ${request.ticker}
 
-Données résumées:
-${JSON.stringify(summarizedData, null, 2)}`;
+Données enrichies complètes:
+${JSON.stringify(enrichedData, null, 2)}
+
+Analyse en profondeur en croisant tous les signaux. Identifie les patterns, convergences et divergences.`;
 
       const aiResponse = await this.callOpenAI(systemPrompt, userPrompt);
 
@@ -747,19 +881,45 @@ ${JSON.stringify(summarizedData, null, 2)}`;
         log.error('Failed to parse AI response', { error: e, response: aiResponse });
         parsedResponse = {
           overview: aiResponse.substring(0, 300),
-          key_signals: [],
+          convergent_signals: [],
+          divergent_signals: [],
+          trading_opportunities: [],
+          risks: [],
+          key_insights: [],
           attention_level: 'moyen' as ImpactLevel,
           narrative: 'Analyse en cours',
           recommendations: [],
         };
       }
 
+      // Extraire les données de prix pour la réponse
+      const priceData = request.data.price_action ? {
+        current_price: request.data.price_action.current_price,
+        price_change_pct: request.data.price_action.price_change_pct,
+        volume: request.data.price_action.volume,
+        sentiment: request.data.price_action.price_change_pct 
+          ? (request.data.price_action.price_change_pct > 0.5 ? "haussière" as const
+            : request.data.price_action.price_change_pct < -0.5 ? "baissière" as const
+            : "neutre" as const)
+          : "neutre" as const,
+        trend: request.data.price_action.price_change_pct
+          ? (request.data.price_action.price_change_pct > 0 ? "bullish" as const
+            : request.data.price_action.price_change_pct < 0 ? "bearish" as const
+            : "neutral" as const)
+          : "neutral" as const,
+      } : undefined;
+
       const response: TickerActivityAnalysisResponse = {
         success: true,
         ticker: request.ticker,
+        price_data: priceData,
         analysis: {
           overview: parsedResponse.overview || 'Analyse en cours',
-          key_signals: parsedResponse.key_signals || [],
+          convergent_signals: parsedResponse.convergent_signals || [],
+          divergent_signals: parsedResponse.divergent_signals || [],
+          trading_opportunities: parsedResponse.trading_opportunities || [],
+          risks: parsedResponse.risks || [],
+          key_insights: parsedResponse.key_insights || [],
           attention_level: parsedResponse.attention_level || 'moyen',
           narrative: parsedResponse.narrative || 'Analyse en cours',
           recommendations: parsedResponse.recommendations || [],
@@ -768,8 +928,8 @@ ${JSON.stringify(summarizedData, null, 2)}`;
         timestamp: new Date().toISOString(),
       };
 
-      // Mettre en cache (cache court: 30 min)
-      await this.cacheAnalysis(cacheKey, response, 1800);
+      // Mettre en cache avec hash des métriques (cache long: 24h si données identiques)
+      await this.cacheAnalysis(cacheKey, response, 86400); // 24h
 
       return response;
       },
@@ -839,21 +999,83 @@ ${JSON.stringify(summarizedData, null, 2)}`;
   }
 
   /**
-   * Récupérer une analyse en cache depuis Supabase
+   * Générer un hash des données d'entrée pour le cache
+   * Si les données sont identiques, le hash sera le même → cache hit
    */
-  private async getCachedAnalysis(cacheKey: string): Promise<any | null> {
+  private generateDataHash(data: any): string {
     try {
+      // Normaliser les données (trier les clés, supprimer les valeurs null/undefined)
+      const normalized = JSON.stringify(data, Object.keys(data).sort());
+      const hash = createHash('sha256').update(normalized).digest('hex');
+      return hash.substring(0, 16); // Utiliser les 16 premiers caractères pour la clé
+    } catch (e) {
+      logger.error('Error generating data hash', { error: e });
+      // Fallback: utiliser un hash basé sur la stringification simple
+      return createHash('sha256').update(JSON.stringify(data)).digest('hex').substring(0, 16);
+    }
+  }
+
+  /**
+   * Récupérer une analyse en cache depuis Supabase
+   * Recherche par ticker + hash des données pour trouver si les données sont identiques
+   * IMPORTANT: Le cache_key doit inclure le ticker pour éviter les collisions
+   */
+  private async getCachedAnalysis(cacheKey: string, dataHash?: string, expectedTicker?: string): Promise<any | null> {
+    try {
+      // TEMPORAIRE: Invalider tous les caches pour forcer une nouvelle analyse
+      // TODO: Retirer cette logique après vérification
+      const INVALIDATE_CACHE = process.env.INVALIDATE_AI_CACHE === 'true';
+      if (INVALIDATE_CACHE) {
+        logger.info('Cache invalidation enabled, skipping cache lookup', { cacheKey });
+        return null;
+      }
+
+      // Recherche stricte par cache_key exact (qui inclut maintenant le ticker + hash)
       const { data, error } = await supabase
         .from('ai_analyses')
         .select('*')
         .eq('cache_key', cacheKey)
         .gt('expires_at', new Date().toISOString())
-        .single();
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error || !data) {
         return null;
       }
 
+      // Vérification supplémentaire: extraire le ticker du cache_key pour sécurité
+      const cacheKeyParts = cacheKey.split('_');
+      const tickerFromKey = cacheKeyParts.length >= 3 ? cacheKeyParts[2] : null;
+      
+      // Si on peut extraire le ticker, vérifier qu'il correspond
+      if (tickerFromKey && data.analysis_data?.ticker) {
+        if (data.analysis_data.ticker.toUpperCase() !== tickerFromKey.toUpperCase()) {
+          logger.warn('Cache key ticker mismatch, invalidating cache', {
+            cacheKey,
+            cachedTicker: data.analysis_data.ticker,
+            expectedTicker: tickerFromKey,
+          });
+          // Invalider ce cache incorrect
+          await this.invalidateCache(cacheKey);
+          return null;
+        }
+      }
+
+      // Vérification supplémentaire si un ticker est attendu
+      if (expectedTicker && data.analysis_data?.ticker) {
+        if (data.analysis_data.ticker.toUpperCase() !== expectedTicker.toUpperCase()) {
+          logger.warn('Cache ticker mismatch with expected ticker, invalidating cache', {
+            cacheKey,
+            cachedTicker: data.analysis_data.ticker,
+            expectedTicker,
+          });
+          await this.invalidateCache(cacheKey);
+          return null;
+        }
+      }
+
+      logger.info('Cache hit', { cacheKey, ticker: data.analysis_data?.ticker });
       return data.analysis_data;
     } catch (e) {
       logger.error('Error fetching cached analysis', { error: e, cacheKey });
@@ -881,6 +1103,46 @@ ${JSON.stringify(summarizedData, null, 2)}`;
     } catch (e) {
       logger.error('Error caching analysis', { error: e, cacheKey });
       // Ne pas faire échouer la requête si le cache échoue
+    }
+  }
+
+  /**
+   * Invalider le cache pour une clé spécifique
+   */
+  private async invalidateCache(cacheKey: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('ai_analyses')
+        .delete()
+        .eq('cache_key', cacheKey);
+
+      if (error) {
+        logger.error('Error invalidating cache', { error, cacheKey });
+      } else {
+        logger.info('Cache invalidated', { cacheKey });
+      }
+    } catch (e) {
+      logger.error('Error invalidating cache', { error: e, cacheKey });
+    }
+  }
+
+  /**
+   * Invalider le cache pour un ticker spécifique (toutes les analyses)
+   */
+  async invalidateTickerCache(ticker: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('ai_analyses')
+        .delete()
+        .like('cache_key', `%_${ticker.toUpperCase()}_%`);
+
+      if (error) {
+        logger.error('Error invalidating ticker cache', { error, ticker });
+      } else {
+        logger.info('Ticker cache invalidated', { ticker });
+      }
+    } catch (e) {
+      logger.error('Error invalidating ticker cache', { error: e, ticker });
     }
   }
 

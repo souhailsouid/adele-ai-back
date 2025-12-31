@@ -28,12 +28,14 @@ import * as uw from "./unusual-whales";
 import { fmpRoutes } from "./routes/fmp.routes";
 import { combinedAnalysisRoutes } from "./routes/combined-analysis.routes";
 import { scoringRoutes } from "./routes/scoring.routes";
+import { marketSignalsRoutes } from "./routes/market-signals.routes";
 import { gammaSqueezeRoutes } from "./routes/gamma-squeeze.routes";
 import { surveillanceRoutes } from "./routes/surveillance.routes";
 import { alertRoutes } from "./routes/alert.routes";
 import { smartMoneyRoutes } from "./routes/smart-money.routes";
 import { attributionRoutes } from "./routes/attribution.routes";
 import { aiAnalystRoutes } from "./routes/ai-analyst.routes";
+import { flowAlertsIngestionRoutes } from "./routes/flow-alerts-ingestion.routes";
 import { getCombinedEconomicCalendar } from "./economic-calendar";
 import { getLatest13FFilings } from "./13f-filings";
 import type { NotificationType } from "./types/unusual-whales/alerts";
@@ -466,6 +468,8 @@ const routes: Route[] = [
       // ========== FMP API Routes ==========
       // Routes FMP sont maintenant dans ./routes/fmp.routes.ts
       ...fmpRoutes,
+      // ========== Market Signals Routes ==========
+      ...marketSignalsRoutes,
       // ========== Aliases pour simplifier l'utilisation ==========
       {
         method: "GET",
@@ -524,6 +528,8 @@ const routes: Route[] = [
       ...attributionRoutes,
       // ========== AI Analyst Routes ==========
       ...aiAnalystRoutes,
+      // ========== Flow Alerts Ingestion Routes ==========
+      ...flowAlertsIngestionRoutes,
       // ========== Unusual Whales API Routes ==========
       {
         method: "GET",
@@ -1553,7 +1559,8 @@ const routes: Route[] = [
           if (event.queryStringParameters) {
             if (event.queryStringParameters.limit) {
               const limit = parseInt(event.queryStringParameters.limit, 10);
-              if (!isNaN(limit) && limit >= 1 && limit <= 500) {
+              // L'API UW accepte jusqu'à 1000
+              if (!isNaN(limit) && limit >= 1 && limit <= 1000) {
                 params.limit = limit;
               }
             }
@@ -2505,9 +2512,9 @@ const routes: Route[] = [
             }
           }
           
-          if (!expirations || expirations.length === 0) {
-            throw new Error("Missing required parameter: expirations[] (e.g., expirations[]=2024-02-02&expirations[]=2024-01-26)");
-          }
+          // if (!expirations || expirations.length === 0) {
+          //   throw new Error("Missing required parameter: expirations[] (e.g., expirations[]=2024-02-02&expirations[]=2024-01-26)");
+          // }
           
           console.log('[Spot Exposures] Final expirations:', expirations);
           const params: SpotExposureByStrikeAndExpiryQueryParams = { expirations };
@@ -2850,13 +2857,57 @@ const routes: Route[] = [
         handler: async (event) => {
           const params: OptionTradeFlowAlertsQueryParams = {};
           if (event.queryStringParameters) {
+            // Parse limit
             if (event.queryStringParameters.limit) {
               const limit = parseInt(event.queryStringParameters.limit, 10);
               if (!isNaN(limit) && limit >= 1 && limit <= 200) {
                 params.limit = limit;
               }
             }
-            // Ajouter d'autres paramètres selon les besoins...
+            // Parse ticker_symbol
+            if (event.queryStringParameters.ticker_symbol) {
+              params.ticker_symbol = event.queryStringParameters.ticker_symbol.toUpperCase();
+            }
+            // Parse min_premium
+            if (event.queryStringParameters.min_premium) {
+              const minPremium = parseFloat(event.queryStringParameters.min_premium);
+              if (!isNaN(minPremium)) {
+                params.min_premium = minPremium;
+              }
+            }
+            // Parse max_premium
+            if (event.queryStringParameters.max_premium) {
+              const maxPremium = parseFloat(event.queryStringParameters.max_premium);
+              if (!isNaN(maxPremium)) {
+                params.max_premium = maxPremium;
+              }
+            }
+            // Parse boolean flags
+            if (event.queryStringParameters.is_call !== undefined) {
+              params.is_call = event.queryStringParameters.is_call === 'true';
+            }
+            if (event.queryStringParameters.is_put !== undefined) {
+              params.is_put = event.queryStringParameters.is_put === 'true';
+            }
+            if (event.queryStringParameters.is_sweep !== undefined) {
+              params.is_sweep = event.queryStringParameters.is_sweep === 'true';
+            }
+            if (event.queryStringParameters.is_floor !== undefined) {
+              params.is_floor = event.queryStringParameters.is_floor === 'true';
+            }
+            if (event.queryStringParameters.is_otm !== undefined) {
+              params.is_otm = event.queryStringParameters.is_otm === 'true';
+            }
+            if (event.queryStringParameters.all_opening !== undefined) {
+              params.all_opening = event.queryStringParameters.all_opening === 'true';
+            }
+            // Parse date filters
+            if (event.queryStringParameters.newer_than) {
+              params.newer_than = event.queryStringParameters.newer_than;
+            }
+            if (event.queryStringParameters.older_than) {
+              params.older_than = event.queryStringParameters.older_than;
+            }
           }
           return await uw.getUWOptionTradeFlowAlerts(Object.keys(params).length > 0 ? params : undefined);
         },

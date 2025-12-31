@@ -5,7 +5,9 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "zip": "cd dist && zip -r ../collector-rss.zip .",
-    "bundle": "npm run build && npm run zip"
+    "bundle": "npm run build && npm run zip",
+    "test:local": "tsx test-local.ts",
+    "test:feed": "tsx test-single-feed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-eventbridge": "^3.632.0",
@@ -15,7 +17,9 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.6.3",
     "@types/aws-lambda": "^8.10.136",
-    "@types/node": "^20.11.0"
+    "@types/node": "^20.11.0",
+    "dotenv": "^16.3.1",
+    "tsx": "^4.7.0"
   }
 }
 

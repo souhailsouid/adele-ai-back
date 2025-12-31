@@ -16,7 +16,9 @@ resource "aws_apigatewayv2_api" "http" {
   description   = "API Gateway pour les routes de l'application principale (signals, funds, companies, analysis, scoring)"
   protocol_type = "HTTP"
   cors_configuration {
-    allow_origins  = var.frontend_allowed_origins
+    # CORS: autoriser toutes les origines (Swagger, localhost, etc.)
+    # Si tu veux restreindre plus tard, remets var.frontend_allowed_origins ici.
+    allow_origins  = ["*"]
     allow_methods  = ["GET", "POST", "PATCH", "OPTIONS"]
     allow_headers  = ["authorization", "content-type"]
     expose_headers = ["*"]
@@ -32,7 +34,7 @@ resource "aws_lambda_function" "api" {
   handler          = "index.handler"
   filename         = "${path.module}/../../services/api/api.zip"                   # ← produit par npm run bundle
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip") # ← détecte automatiquement les changements
-  timeout          = 20  # Augmenté à 20s pour les analyses IA qui peuvent prendre du temps
+  timeout          = 30  # 30s pour limiter les timeouts sur endpoints IA (ex: /ai/options-analysis)
   memory_size      = 512
 
   depends_on = [aws_cloudwatch_log_group.api_lambda]
@@ -312,6 +314,15 @@ resource "aws_apigatewayv2_route" "get_ticker_stats" {
 resource "aws_apigatewayv2_route" "get_ticker_insights" {
   api_id             = aws_apigatewayv2_api.http.id
   route_key          = "GET /ticker-insights/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Market Signals
+resource "aws_apigatewayv2_route" "get_market_signals" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /market-signals/{ticker}"
   target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id

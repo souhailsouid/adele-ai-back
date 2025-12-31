@@ -1,0 +1,62 @@
+# --- DEPENDANCES & LOCKS ---
+# Envoyer les lock files consomme des millions de tokens pour rien
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# --- BUILDS & OUTPUTS ---
+.next/
+dist/
+out/
+build/
+.vercel/
+.turbo/
+coverage/
+
+# --- ASSETS LOURDS (Tueur de budget) ---
+# L'IA ne sait pas lire les binaires, ne les envoie pas
+public/assets/
+public/fonts/
+public/images/
+**/*.svg
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.pdf
+**/*.mp4
+
+# --- CONFIG & CACHE ---
+.git/
+.cache/
+.eslintcache
+.stylelintcache
+.prettiercache
+*.log
+.DS_Store
+
+# --- DB & STORAGE ---
+# Si tu as une DB locale ou des uploads de test
+*.sqlite
+*.sqlite-journal
+storage/
+uploads/
+
+# --- SECURE ---
+.env*
+*.pem
+*.key
+# Empêcher l'IA de lire les librairies installées dans les workers
+**/workers/parser-13f/requests/
+**/workers/parser-13f/urllib3/
+**/workers/parser-13f/soupsieve/
+**/workers/parser-13f/idna/
+**/*.dist-info/
+**/*.egg-info/
+
+# Ignorer les archives de déploiement
+**/*.zip
+
+# Ignorer les caches Python
+**/__pycache__/

@@ -9,6 +9,8 @@ import type {
   OptionsFlowAnalysisRequest,
   InstitutionMoveAnalysisRequest,
   TickerActivityAnalysisRequest,
+  FlowOptionsAnalysisProRequest,
+  FlowOptionsSignal,
 } from '../types/ai-analyst';
 import * as uw from '../unusual-whales';
 import * as fmp from '../fmp';
@@ -18,6 +20,20 @@ import {
   getLatestFinancialJuiceAnalysis,
   type FinancialJuiceHeadline,
 } from '../services/financial-juice.service';
+import {
+  validateRecentFlows,
+  validateDarkPoolTrades,
+  validateInsiderTransactions,
+  validateShortInterest,
+  validateStockQuote,
+  validateInstitutionalOwnership,
+  validatePrice,
+  getSourceStatus,
+  type SourceStatus,
+} from '../utils/validation';
+import { logger } from '../utils/logger';
+import { FlowOptionsAnalysisService } from '../services/flow-options-analysis.service';
+import { supabase } from '../supabase';
 
 function getPathParam(event: APIGatewayProxyEventV2, key: string): string | undefined {
   return event.pathParameters?.[key];
@@ -1106,53 +1122,417 @@ export const aiAnalystRoutes = [
       // Prioriser les APIs les plus importantes, timeouts réduits
       // Appeler les APIs critiques en premier
       const [optionsFlow, darkPool, insiders, shortInterest] = await Promise.allSettled([
-        timeout(uw.getUWRecentFlows(ticker, { limit: 30 }), 3000), // Réduit à 30
+        timeout(uw.getUWRecentFlows(ticker, { limit: 30 }), 3000),
         timeout(uw.getUWDarkPoolTrades(ticker, { limit: 30 }), 3000),
         timeout(uw.getUWStockInsiderBuySells(ticker, {}), 3000),
         timeout(uw.getUWShortInterestAndFloat(ticker), 2000),
       ]);
-
+        
       // APIs optionnelles avec timeouts très courts (peuvent échouer sans problème)
       const [institutionalOwnership, quote] = await Promise.allSettled([
         timeout(uw.getUWInstitutionOwnership(ticker, { limit: 10 }), 2000),
         timeout(fmp.getFMPStockQuote(ticker), 2000),
       ]);
 
+      // ========== VALIDATION ROBUSTE (4 couches) ==========
+      
+      // 1. Validation Zod + Sanity checks pour chaque source
+      const optionsFlowValidation = optionsFlow.status === 'fulfilled' && optionsFlow.value?.success
+        ? validateRecentFlows(optionsFlow.value.data, ticker)
+        : { data: null, status: getSourceStatus(optionsFlow, null) as SourceStatus };
+      
+      const darkPoolValidation = darkPool.status === 'fulfilled' && darkPool.value?.success
+        ? validateDarkPoolTrades(darkPool.value.data, ticker)
+        : { data: null, status: getSourceStatus(darkPool, null) as SourceStatus };
+      
+      const insidersValidation = insiders.status === 'fulfilled' && insiders.value?.success
+        ? validateInsiderTransactions(insiders.value.data, ticker)
+        : { data: null, status: getSourceStatus(insiders, null) as SourceStatus };
+      
+      const shortInterestValidation = shortInterest.status === 'fulfilled' && shortInterest.value?.success
+        ? validateShortInterest(shortInterest.value.data, ticker)
+        : { data: null, status: getSourceStatus(shortInterest, null) as SourceStatus };
+      
+      const institutionalOwnershipValidation = institutionalOwnership.status === 'fulfilled' && institutionalOwnership.value?.success
+        ? validateInstitutionalOwnership(institutionalOwnership.value.data, ticker)
+        : { data: null, status: getSourceStatus(institutionalOwnership, null) as SourceStatus };
+
+      // 2. Validation CRITIQUE du prix (toujours requis)
+      const priceValidation = validatePrice(quote, ticker);
+      
+      if (!priceValidation.price_data) {
+        logger.error('CRITICAL: Failed to validate price data', {
+          ticker,
+          status: priceValidation.status,
+        });
+        // On continue quand même mais on log l'erreur
+      }
+
+      // 3. Construire les métadonnées de statut
+      const meta = {
+        options_flow_status: optionsFlowValidation.status,
+        dark_pool_status: darkPoolValidation.status,
+        insiders_status: insidersValidation.status,
+        short_interest_status: shortInterestValidation.status,
+        institutional_ownership_status: institutionalOwnershipValidation.status,
+        price_status: priceValidation.status,
+        fetched_at: new Date().toISOString(),
+      };
+
       const activityData = {
-        options_flow:
-          optionsFlow.status === 'fulfilled' && optionsFlow.value.success
-            ? optionsFlow.value.data
-            : null,
-        dark_pool:
-          darkPool.status === 'fulfilled' && darkPool.value.success
-            ? darkPool.value.data
-            : null,
-        insiders:
-          insiders.status === 'fulfilled' && insiders.value.success
-            ? insiders.value.data
-            : null,
-        short_interest:
-          shortInterest.status === 'fulfilled' && shortInterest.value.success
-            ? shortInterest.value.data
-            : null,
-        institutional_ownership:
-          institutionalOwnership.status === 'fulfilled' &&
-          institutionalOwnership.value?.success
-            ? institutionalOwnership.value.data
-            : null,
+        options_flow: optionsFlowValidation.data,
+        dark_pool: darkPoolValidation.data,
+        insiders: insidersValidation.data,
+        short_interest: shortInterestValidation.data,
+        institutional_ownership: institutionalOwnershipValidation.data,
         recent_news: [], // Skip news pour éviter timeout
         upcoming_events: [], // Skip events pour éviter timeout
-        price_action: quote.status === 'fulfilled' && quote.value?.success
-          ? {
-              current_price: quote.value.data?.price || null,
-              price_change_pct: quote.value.data?.changePercent || null,
-              volume: quote.value.data?.volume || null,
-            }
-          : null,
+        price_action: priceValidation.price_data ? {
+          current_price: priceValidation.price_data.current_price,
+          price_change_pct: priceValidation.price_data.price_change_pct,
+          volume: priceValidation.price_data.volume,
+        } : null,
+        meta, // Métadonnées de statut pour l'IA et le front
       };
 
       const request: TickerActivityAnalysisRequest = {
         ticker: body.ticker.toUpperCase(),
+        data: activityData,
+      };
+
+      return await aiAnalystService.analyzeTickerActivity(request);
+    },
+  },
+
+  /**
+   * POST /ai/ticker-options-analysis
+   * Analyse approfondie des options (OI changes, IV, Greeks, Max Pain, Volume Profile)
+   * Endpoint spécialisé pour l'analyse détaillée des options
+   */
+  {
+    method: 'POST',
+    path: '/ai/ticker-options-analysis',
+    handler: async (event) => {
+      const body = getBody(event);
+
+      if (!body.ticker) {
+        throw new Error('Missing required field: ticker');
+      }
+
+      const ticker = body.ticker.toUpperCase();
+
+      const timeout = (promise: Promise<any>, ms: number) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms)),
+        ]).catch(() => null);
+      };
+
+      // Récupération des données enrichies pour options
+      const [
+        optionsFlow,
+        oiChange,
+        flowPerExpiry,
+        greeks,
+        maxPain,
+        quote,
+      ] = await Promise.allSettled([
+        timeout(uw.getUWRecentFlows(ticker, { limit: 100 }), 4000),
+        timeout(uw.getUWOIChange(ticker, {}), 3000),
+        timeout(uw.getUWFlowPerExpiry(ticker, {}), 3000),
+        timeout(uw.getUWGreeks(ticker, { expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }), 3000),
+        timeout(uw.getUWMaxPain(ticker, {}), 2000),
+        timeout(fmp.getFMPStockQuote(ticker), 2000),
+      ]);
+
+      const optionsFlowData = optionsFlow.status === 'fulfilled' && optionsFlow.value?.success ? optionsFlow.value.data : [];
+      const oiChangeData = oiChange.status === 'fulfilled' && oiChange.value?.success ? oiChange.value.data : null;
+      const flowPerExpiryData = flowPerExpiry.status === 'fulfilled' && flowPerExpiry.value?.success ? flowPerExpiry.value.data : [];
+      const greeksData = greeks.status === 'fulfilled' && greeks.value?.success ? greeks.value.data : null;
+      const maxPainData = maxPain.status === 'fulfilled' && maxPain.value?.success ? maxPain.value.data : null;
+      const quoteData = quote.status === 'fulfilled' && quote.value?.success ? quote.value.data : null;
+
+      // Calculer les métriques enrichies
+      // FlowPerExpiry a call_volume et put_volume directement
+      const totalVolume = optionsFlowData.reduce((sum: number, f: any) => {
+        if (f.call_volume !== undefined && f.put_volume !== undefined) {
+          return sum + (f.call_volume || 0) + (f.put_volume || 0);
+        }
+        return sum + (f.volume || 0);
+      }, 0);
+      
+      const callVolume = optionsFlowData.reduce((sum: number, f: any) => {
+        if (f.call_volume !== undefined) {
+          return sum + (f.call_volume || 0);
+        }
+        // Fallback pour les anciennes structures
+        if (f.type === 'call' || f.call_put === 'call' || f.option_type === 'call') {
+          return sum + (f.volume || 0);
+        }
+        return sum;
+      }, 0);
+      
+      const putVolume = optionsFlowData.reduce((sum: number, f: any) => {
+        if (f.put_volume !== undefined) {
+          return sum + (f.put_volume || 0);
+        }
+        // Fallback pour les anciennes structures
+        if (f.type === 'put' || f.call_put === 'put' || f.option_type === 'put') {
+          return sum + (f.volume || 0);
+        }
+        return sum;
+      }, 0);
+      
+      const callPutRatio = putVolume > 0 ? callVolume / putVolume : callVolume > 0 ? 999 : 0;
+
+      const openInterestChange = oiChangeData ? {
+        total_change: oiChangeData.total_change || 0,
+        call_oi_change: oiChangeData.call_oi_change || 0,
+        put_oi_change: oiChangeData.put_oi_change || 0,
+        max_oi_strikes: oiChangeData.max_oi_strikes || [],
+      } : undefined;
+
+      const ivData = greeksData ? {
+        current: greeksData.iv || null,
+        percentile: null,
+        skew: greeksData.skew || null,
+      } : undefined;
+
+      // Volume profile: FlowPerExpiry est déjà agrégé par expiry
+      const volumeProfileByStrike: Record<string, number> = {};
+      const volumeProfileByExpiry: Record<string, number> = {};
+      optionsFlowData.forEach((f: any) => {
+        const expiry = f.expiry || f.expiration_date;
+        if (expiry) {
+          // FlowPerExpiry a déjà call_volume + put_volume par expiry
+          const totalVol = (f.call_volume || 0) + (f.put_volume || 0);
+          volumeProfileByExpiry[expiry] = (volumeProfileByExpiry[expiry] || 0) + totalVol;
+        }
+      });
+
+      // FlowPerExpiry n'a pas de champ sweep/block (structure agrégée)
+      const sweeps = 0;
+      const blocks = 0;
+      const largestSweep = null;
+
+      const maxPainPrice = maxPainData?.max_pain || null;
+      const currentPrice = quoteData?.price || quoteData?.last || null;
+      const maxPainPriceDistance = maxPainPrice && currentPrice ? Math.abs((maxPainPrice - currentPrice) / currentPrice) : null;
+
+      const optionsData = {
+        total_volume: totalVolume,
+        call_put_ratio: callPutRatio,
+        unusual: callPutRatio > 2 || callPutRatio < 0.5 || sweeps > 5,
+        data: optionsFlowData,
+        open_interest_change: openInterestChange,
+        implied_volatility: ivData,
+        volume_profile: {
+          by_strike: volumeProfileByStrike,
+          by_expiry: volumeProfileByExpiry,
+        },
+        unusual_activity: {
+          sweeps,
+          blocks,
+          largest_sweep: largestSweep ? {
+            strike: largestSweep.strike || largestSweep.strike_price,
+            expiry: largestSweep.expiry || largestSweep.expiration_date,
+            premium: largestSweep.premium || largestSweep.total_premium || 0,
+            volume: largestSweep.volume || 0,
+          } : null,
+        },
+        max_pain: {
+          price: maxPainPrice,
+          distance_from_current: maxPainPriceDistance,
+        },
+      };
+
+      // Récupérer le prix actuel pour l'analyse
+      const priceAction = quoteData ? {
+        current_price: quoteData.price || quoteData.last || null,
+        price_change_pct: quoteData.changePercent || quoteData.change_percent || null,
+        volume: quoteData.volume || null,
+      } : undefined;
+
+      const activityData = {
+        options_flow: {
+          total_volume: totalVolume,
+          call_put_ratio: callPutRatio,
+          unusual: callPutRatio > 2 || callPutRatio < 0.5 || sweeps > 5,
+          open_interest_change: openInterestChange,
+          implied_volatility: ivData,
+          volume_profile: {
+            by_strike: volumeProfileByStrike,
+            by_expiry: volumeProfileByExpiry,
+          },
+          unusual_activity: {
+            sweeps,
+            blocks,
+            largest_sweep: largestSweep ? {
+              strike: largestSweep.strike || largestSweep.strike_price,
+              expiry: largestSweep.expiry || largestSweep.expiration_date,
+              premium: largestSweep.premium || largestSweep.total_premium || 0,
+              volume: largestSweep.volume || 0,
+            } : null,
+          },
+          max_pain: {
+            price: maxPainPrice,
+            distance_from_current: maxPainPriceDistance,
+          },
+          data: optionsFlowData,
+        },
+        price_action: priceAction,
+      };
+
+      const request: TickerActivityAnalysisRequest = {
+        ticker: ticker,
+        data: activityData,
+      };
+
+      return await aiAnalystService.analyzeTickerActivity(request);
+    },
+  },
+
+  /**
+   * POST /ai/ticker-institutional-analysis
+   * Analyse institutionnelle détaillée (ownership, changes, patterns)
+   * Endpoint spécialisé pour l'analyse institutionnelle
+   */
+  {
+    method: 'POST',
+    path: '/ai/ticker-institutional-analysis',
+    handler: async (event) => {
+      const body = getBody(event);
+
+      if (!body.ticker) {
+        throw new Error('Missing required field: ticker');
+      }
+
+      const ticker = body.ticker.toUpperCase();
+
+      const timeout = (promise: Promise<any>, ms: number) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms)),
+        ]).catch(() => null);
+      };
+
+      // Récupération des données institutionnelles
+      const [institutionalOwnership] = await Promise.allSettled([
+        timeout(uw.getUWInstitutionOwnership(ticker, { limit: 50 }), 3000),
+      ]);
+
+      const institutionalOwnershipData = institutionalOwnership.status === 'fulfilled' && institutionalOwnership.value?.success ? institutionalOwnership.value.data : [];
+
+      const institutionalOwnershipTotal = institutionalOwnershipData.reduce((sum: number, io: any) => sum + (io.shares || io.units || 0), 0);
+      const institutionalOwnershipChanges = institutionalOwnershipData
+        .filter((io: any) => io.units_change || io.shares_change)
+        .map((io: any) => ({
+          institution: io.name || io.institution_name,
+          change: io.units_change || io.shares_change || 0,
+          change_pct: io.units_change_pct || null,
+        }));
+
+      const institutionalData = {
+        total_shares: institutionalOwnershipTotal,
+        changes: institutionalOwnershipChanges,
+        data: institutionalOwnershipData,
+      };
+
+      // Récupérer le prix actuel
+      const [quote] = await Promise.allSettled([
+        timeout(fmp.getFMPStockQuote(ticker), 2000),
+      ]);
+
+      const quoteData = quote.status === 'fulfilled' && quote.value?.success ? quote.value.data : null;
+      const priceAction = quoteData ? {
+        current_price: quoteData.price || quoteData.last || null,
+        price_change_pct: quoteData.changePercent || quoteData.change_percent || null,
+        volume: quoteData.volume || null,
+      } : undefined;
+
+      // Créer une analyse simplifiée pour l'activité institutionnelle
+      const activityData = {
+        institutional_ownership: institutionalData,
+        price_action: priceAction,
+      };
+
+      const request: TickerActivityAnalysisRequest = {
+        ticker: ticker,
+        data: activityData,
+      };
+
+      return await aiAnalystService.analyzeTickerActivity(request);
+    },
+  },
+
+  /**
+   * POST /ai/ticker-news-events-analysis
+   * Analyse des news et événements (earnings, FDA, news sentiment)
+   * Endpoint spécialisé pour l'analyse des news et événements
+   */
+  {
+    method: 'POST',
+    path: '/ai/ticker-news-events-analysis',
+    handler: async (event) => {
+      const body = getBody(event);
+
+      if (!body.ticker) {
+        throw new Error('Missing required field: ticker');
+      }
+
+      const ticker = body.ticker.toUpperCase();
+
+      const timeout = (promise: Promise<any>, ms: number) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms)),
+        ]).catch(() => null);
+      };
+
+      // Récupération des news et événements
+      const [news, earningsCalendar] = await Promise.allSettled([
+        timeout(fmp.getFMPStockNews({ symbol: ticker, page: 0, limit: 10 }), 2000),
+        timeout(fmp.getFMPEarningsCalendar({ symbol: ticker, from: new Date().toISOString().split('T')[0] }), 2000),
+      ]);
+
+      const newsData = news.status === 'fulfilled' && news.value?.success ? news.value.data : [];
+      const earningsCalendarData = earningsCalendar.status === 'fulfilled' && earningsCalendar.value?.success ? earningsCalendar.value.data : [];
+
+      const upcomingEvents = earningsCalendarData.map((e: any) => ({
+        date: e.date || e.earningsDate,
+        description: `Earnings: ${e.symbol || ticker} Q${e.quarter || '?'} ${e.year || new Date().getFullYear()}`,
+        type: 'earnings',
+      })).filter((e) => e.date && new Date(e.date) >= new Date());
+
+      // Récupérer le prix actuel
+      const [quote] = await Promise.allSettled([
+        timeout(fmp.getFMPStockQuote(ticker), 2000),
+      ]);
+
+      const quoteData = quote.status === 'fulfilled' && quote.value?.success ? quote.value.data : null;
+      const priceAction = quoteData ? {
+        current_price: quoteData.price || quoteData.last || null,
+        price_change_pct: quoteData.changePercent || quoteData.change_percent || null,
+        volume: quoteData.volume || null,
+      } : undefined;
+
+      const newsEventsData = {
+        recent_news: newsData.slice(0, 10).map((n: any) => ({
+          title: n.title || n.headline,
+          date: n.publishedDate || n.date,
+          url: n.url,
+        })),
+        upcoming_events: upcomingEvents.slice(0, 10),
+      };
+
+      const activityData = {
+        recent_news: newsEventsData.recent_news,
+        upcoming_events: newsEventsData.upcoming_events,
+        price_action: priceAction,
+      };
+
+      const request: TickerActivityAnalysisRequest = {
+        ticker: ticker,
         data: activityData,
       };
 
@@ -1231,6 +1611,101 @@ export const aiAnalystRoutes = [
       return {
         statusCode: 200,
         body: JSON.stringify(analysis),
+      };
+    },
+  },
+
+  /**
+   * DELETE /ai/cache/invalidate/{ticker}
+   * Invalider le cache pour un ticker spécifique
+   */
+  {
+    method: 'DELETE',
+    path: '/ai/cache/invalidate/{ticker}',
+    handler: async (event) => {
+      const ticker = getPathParam(event, 'ticker')?.toUpperCase();
+      
+      if (!ticker) {
+        throw new Error('Missing required parameter: ticker');
+      }
+
+      await aiAnalystService.invalidateTickerCache(ticker);
+      
+      return {
+        success: true,
+        message: `Cache invalidated for ${ticker}`,
+        ticker,
+        timestamp: new Date().toISOString(),
+      };
+    },
+  },
+
+  /**
+   * POST /ai/flow-options-analysis-pro
+   * Analyser des signals de flow options selon la méthodologie professionnelle
+   * 
+   * Body: {
+   *   ticker?: string,  // Si fourni, lit depuis la DB (recommandé pour éviter cold start)
+   *   signals?: FlowOptionsSignal[],  // Optionnel si ticker fourni
+   *   context?: { days_to_earnings?, recent_news?, price_trend? },
+   *   limit?: number,  // Nombre de signals à analyser depuis la DB (défaut: 10)
+   *   min_premium?: number  // Prime minimum pour filtrer depuis la DB (défaut: 50000)
+   * }
+   * 
+   * Comportement:
+   * - Si ticker fourni ET signals non fourni: lit depuis la DB (flow_alerts)
+   * - Si signals fourni: utilise les signals fournis (mode direct)
+   * - Si les deux fournis: utilise signals (priorité)
+   */
+  {
+    method: 'POST',
+    path: '/ai/flow-options-analysis-pro',
+    handler: async (event) => {
+      const body = getBody(event) as FlowOptionsAnalysisProRequest & {
+        ticker?: string;
+        limit?: number;
+        min_premium?: number;
+      };
+
+      // Valider les paramètres
+      if (!body.ticker && (!body.signals || body.signals.length === 0)) {
+        throw new Error(
+          'Either provide "ticker" (to read from DB, loads CALL + PUT automatically) or "signals" array (direct mode).'
+        );
+      }
+
+      // Si signals fourni, valider qu'ils ont les champs minimum requis
+      if (body.signals && body.signals.length > 0) {
+        for (const signal of body.signals) {
+          if (!signal.ticker || !signal.type || !signal.expiry) {
+            throw new Error(
+              'Each signal must have at least: ticker, type (call/put), and expiry'
+            );
+          }
+        }
+      }
+
+      logger.info('Starting flow options analysis pro', {
+        ticker: body.ticker,
+        signalsCount: body.signals?.length || 0,
+        source: body.ticker ? 'database (CALL + PUT)' : 'direct',
+      });
+
+      // Le service gère maintenant le chargement depuis la DB si ticker fourni
+      // Il charge automatiquement CALL + PUT ensemble pour une analyse globale
+      const service = new FlowOptionsAnalysisService();
+      const result = await service.analyzeFlowOptions({
+        ticker: body.ticker,
+        signals: body.signals,
+        context: body.context,
+        limit: body.limit || 500, // Limite pour charger depuis la DB
+        min_premium: body.min_premium || 50000, // Prime minimum pour charger depuis la DB
+        min_premium_threshold: body.min_premium || 100000, // Seuil pour filtrer les clusters
+      });
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify(result),
       };
     },
   },

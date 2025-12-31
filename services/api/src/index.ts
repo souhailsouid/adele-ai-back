@@ -1,6 +1,12 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { findRoute } from "./router";
 
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Authorization,Content-Type,Accept",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+};
+
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   // Log initial
   try {
@@ -14,6 +20,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
   try {
     const { requestContext } = event;
+
+    // CORS preflight (Swagger UI / browser fetch)
+    if (requestContext?.http?.method === "OPTIONS") {
+      return { statusCode: 200, headers: corsHeaders, body: "" };
+    }
 
     // Log pour déboguer
     console.log("API Handler called:", {
@@ -30,7 +41,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     if (!jwtClaims) {
       console.log("No JWT claims, returning 401");
-      return { statusCode: 401, body: JSON.stringify({ error: "unauthorized" }) };
+      return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: "unauthorized" }) };
     }
 
     // jwtClaims contient: sub (userId), email, etc.
@@ -42,7 +53,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     if (!routeHandler) {
       console.log("No matching route, returning 404. routeKey was:", event.routeKey);
-      return { statusCode: 404, body: JSON.stringify({ error: "not_found" }) };
+      return { statusCode: 404, headers: corsHeaders, body: JSON.stringify({ error: "not_found" }) };
     }
 
     // Exécuter le handler de la route
@@ -55,6 +66,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       console.log("[HANDLER] Result keys:", result ? Object.keys(result) : "null");
       return {
         statusCode: 200,
+        headers: corsHeaders,
         body: JSON.stringify(result),
       };
     } catch (routeError: any) {
@@ -80,6 +92,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     return {
       statusCode,
+      headers: corsHeaders,
       body: JSON.stringify({
         error: e.message || "Internal server error",
         details: e?.issues || (process.env.NODE_ENV === "development" ? e?.stack : undefined),

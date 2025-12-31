@@ -89,3 +89,31 @@ variable "neo4j_database" {
   sensitive   = false
   default     = "neo4j"
 }
+
+variable "discord_webhook_url" {
+  type        = string
+  description = "Discord webhook URL for real-time alerts"
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_webhook_url" {
+  type        = string
+  description = "Slack webhook URL for real-time alerts"
+  sensitive   = true
+  default     = ""
+}
+
+variable "telegram_bot_token" {
+  type        = string
+  description = "Telegram bot token for real-time alerts"
+  sensitive   = true
+  default     = ""
+}
+
+variable "telegram_chat_id" {
+  type        = string
+  description = "Telegram chat ID for real-time alerts"
+  sensitive   = true
+  default     = ""
+}

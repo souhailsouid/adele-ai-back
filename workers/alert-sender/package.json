@@ -1,0 +1,21 @@
+{
+  "name": "alert-sender",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "zip": "cd dist && zip -r ../alert-sender.zip .",
+    "bundle": "npm run build && npm run zip"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3",
+    "@types/aws-lambda": "^8.10.136",
+    "@types/node": "^20.11.0"
+  }
+}
+
+

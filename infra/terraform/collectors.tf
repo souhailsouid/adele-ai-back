@@ -63,6 +63,7 @@ resource "aws_lambda_function" "collector_rss" {
   runtime       = "nodejs20.x"
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/collector-rss/collector-rss.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../workers/collector-rss/collector-rss.zip")
   timeout       = 300
   memory_size   = 512
 
@@ -146,6 +147,56 @@ resource "aws_lambda_permission" "collector_coinglass_events" {
   function_name = aws_lambda_function.collector_coinglass.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.collector_coinglass_cron.arn
+}
+
+# ============================================
+# Collector FMP Signals
+# ============================================
+resource "aws_cloudwatch_log_group" "collector_fmp_signals" {
+  name              = "/aws/lambda/${var.project}-${var.stage}-collector-fmp-signals"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "collector_fmp_signals" {
+  function_name = "${var.project}-${var.stage}-collector-fmp-signals"
+  role          = aws_iam_role.collector_role.arn
+  runtime       = "nodejs20.x"
+  handler       = "index.handler"
+  filename      = "${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip")
+  timeout       = 300
+  memory_size   = 512
+
+  depends_on = [aws_cloudwatch_log_group.collector_fmp_signals]
+
+  environment {
+    variables = {
+      SUPABASE_URL        = var.supabase_url
+      SUPABASE_SERVICE_KEY = var.supabase_service_key
+      FMP_API_KEY         = var.fmp_api_key
+    }
+  }
+}
+
+# Cron: toutes les heures
+resource "aws_cloudwatch_event_rule" "collector_fmp_signals_cron" {
+  name                = "${var.project}-${var.stage}-collector-fmp-signals-cron"
+  description         = "Déclenche le collector FMP Signals toutes les heures"
+  schedule_expression = "rate(1 hour)"
+}
+
+resource "aws_cloudwatch_event_target" "collector_fmp_signals" {
+  rule      = aws_cloudwatch_event_rule.collector_fmp_signals_cron.name
+  target_id = "CollectorFMPSignals"
+  arn       = aws_lambda_function.collector_fmp_signals.arn
+}
+
+resource "aws_lambda_permission" "collector_fmp_signals_events" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.collector_fmp_signals.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.collector_fmp_signals_cron.arn
 }
 
 # ============================================

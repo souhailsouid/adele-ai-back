@@ -19,9 +19,8 @@
 @baseUrlData = https://faq9dl95v7.execute-api.eu-west-3.amazonaws.com/prod
 
 ### Token d'accès (à mettre à jour régulièrement)
-@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6IjdjMmMzMjA3LTFiM2MtNGMxZS1iNzIyLTA3MjIzY2U2NzNkMCIsImV2ZW50X2lkIjoiYWYxZDQwOTEtZWUyMy00NzM4LThiNTMtMDYzMjcyYTA2YTZiIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NTI5NTMyMywiZXhwIjoxNzY1Mjk4OTIzLCJpYXQiOjE3NjUyOTUzMjMsImp0aSI6IjhmZTliNGZhLTcyM2UtNGNlZS1iM2Q3LTg1Y2VlN2E5MWJiMCIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.ZijZQQRyvMHFlRHsTl-AZe3grgsv7-_Xhl9r3SAyBqbEFhw5SfFkp5Ca8fZQwjAVqpkFK0wpYIt_oEUmjSnEOKBn_MNmg6zB8POcS5xEOB0opX3tKOdX2IWQX_WJ8HNay8MVXQXixjuczMdy5ZvDVl3Sio3lXph0eSbArEvWx9vjLvr-EGu3bEj9lPMD6zMX-XGNyjcaCB-FBt5nDxCjqtDzZwq1mWlFdaEznU719jA16JgAKmxuPv4HyKcaZMzu4Ss_hPLOCZXw4yW6-pFkFx0-Y2PBsCtIm_a1raUvH2XD4EY7HLoGyQ2X5iVOPw0dE_dBuccRdYegHc_IVIbqPA
-
-@watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImJlZWIyYWMzLWQ2ZDEtNGVlNi04ZjkyLTFmNWVhMGQ3NmU2YyIsImV2ZW50X2lkIjoiZTQzODVjNDYtYjNhOC00MjRjLTgzYjItYzRiMmU5MmZkZjU1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzEwMTM3MiwiZXhwIjoxNzY3MTA0OTcyLCJpYXQiOjE3NjcxMDEzNzIsImp0aSI6IjljNTA4YjNiLTZlZmYtNGU0YS05ODFhLTZmNDVhZThjMjZmYSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.rLnzJyE50724XzkXPPEB-Sht5FYymXU5lLV_s9qcyrBREctpsY7P5bMwwj5IonEp39MFQshnN-aSXbw_Mnkm9s5jqjt-W-81GAlf54Sy31JzJTaOTJTncWIiIBs-ZY0_NLhtpitlcKkw2yEAJHjj4XOTZRsFQckcbZVBrRBIGEKB2NJ5-WzjcD0RuVdXKP3AOjTfCZvtEcSIigfMnUgnTOc5rpPzLnRArdF5vi1Qj_orYy1x5Zl4bZ0fonDSo6N-oYi_-FuXytVpK9gDhJ7QFE-GyvdL3xoZ7RUbRWan_8eW-Z8fwYQ79SKOh9ijsywXg4BQnD2qtZSLWeT1q65XUg
+/fmp/insider-trading/latest@watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
 ### ============================================
 ### ANALYSE COMBINÉE (FMP + UW)
 ### ============================================
@@ -146,8 +145,14 @@ Authorization: Bearer {{accessToken}}
 ### UNUSUAL WHALES - Endpoints de données brutes
 ### ============================================
 ### ⚠️ API Gateway 2 (Données Brutes) - Mettre à jour @baseUrlData après terraform apply
+### ✨ NOUVEAU : Cache intégré dans le service UW
+### Les méthodes suivantes utilisent maintenant le cache automatiquement :
+### - getRecentFlows → stocke dans options_flow (TTL: 1h)
+### - getDarkPoolTrades → stocke dans dark_pool_trades (TTL: 24h)
+### - getShortInterestAndFloat → stocke dans short_interest (TTL: 24h)
 
 ### Recent Flows - Flow d'options récent
+### ✨ Cache : Vérifie automatiquement options_flow avant d'appeler l'API
 GET {{baseUrlData}}/unusual-whales/stock/AAPL/flow-recent?limit=10
 Authorization: Bearer {{accessToken}}
 
@@ -155,16 +160,34 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrlData}}/unusual-whales/stock/TSLA/flow-recent?limit=10&min_premium=50000
 Authorization: Bearer {{accessToken}}
 
+### Recent Flows - NVDA (test cache intégré)
+GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
 ### Institution Ownership - Propriété institutionnelle
 GET {{baseUrlData}}/unusual-whales/institution/AAPL/ownership
 Authorization: Bearer {{accessToken}}
 
 ### Short Interest and Float - Intérêt à découvert
+### ✨ Cache : Vérifie automatiquement short_interest avant d'appeler l'API
 GET {{baseUrlData}}/unusual-whales/shorts/AAPL/interest-float
 Authorization: Bearer {{accessToken}}
 
+### Short Interest and Float - NVDA (test cache intégré)
+GET {{baseUrlData}}/unusual-whales/shorts/NVDA/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Short Interest and Float - TSLA (test cache intégré)
+GET {{baseUrlData}}/unusual-whales/shorts/TSLA/interest-float
+Authorization: Bearer {{accessToken}}
+
 ### Dark Pool Trades - Transactions dark pool
+### ✨ Cache : Vérifie automatiquement dark_pool_trades avant d'appeler l'API
 GET {{baseUrlData}}/unusual-whales/dark-pool/AAPL?limit=50
+Authorization: Bearer {{accessToken}}
+
+### Dark Pool Trades - NVDA (test cache intégré)
+GET {{baseUrlData}}/unusual-whales/dark-pool/NVDA?limit=30
 Authorization: Bearer {{accessToken}}
 
 ### Insider Buy/Sells - Transactions d'insiders
@@ -583,6 +606,25 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrlData}}/unusual-whales/institution/0001697748/activity?limit=100&date=2025-09-30
 Authorization: Bearer {{accessToken}}
 
+### insider trading latest
+GET {{baseUrlData}}/unusual-whales/stock/TSLA/insider-trading/latest
+Authorization: Bearer {{accessToken}}
+### insider trading ticker 
+GET {{baseUrlData}}/unusual-whales/insider/TSLA
+Authorization: Bearer {{accessToken}}
+### insider transactions
+GET {{baseUrlData}}/unusual-whales/insider/transactions?ticker_symbol=TSLA
+Authorization: Bearer {{accessToken}}
+### ticker-flow
+GET {{baseUrlData}}/unusual-whales/insider/TSLA/ticker-flow
+Authorization: Bearer {{accessToken}}
+
+### api/darkpool/
+GET {{baseUrlData}}/unusual-whales/dark-pool/TSLA?limit=30
+Authorization: Bearer {{accessToken}}
+### dark pool recent
+GET {{baseUrlData}}/unusual-whales/dark-pool/recent
+Authorization: Bearer {{accessToken}}
 ### ============================================
 ### HEATMAP OPTIONS - Strike × Expiration
 ### ============================================
@@ -712,6 +754,29 @@ GET {{baseUrlData}}/unusual-whales/institution/0001103887/holdings
 Authorization: Bearer {{accessToken}}
 ##
 ### ============================================
+### ✨ CACHE INTÉGRÉ - NOUVEAU SYSTÈME
+### ============================================
+### Le cache est maintenant intégré directement dans le service UW
+### 
+### Méthodes avec cache automatique :
+### - getRecentFlows() → Cache dans options_flow (TTL: 1h)
+### - getDarkPoolTrades() → Cache dans dark_pool_trades (TTL: 24h)
+### - getShortInterestAndFloat() → Cache dans short_interest (TTL: 24h)
+###
+### Avantages :
+### - Cache transparent : toutes les routes bénéficient automatiquement du cache
+### - Stockage dans Supabase : options_flow, dark_pool_trades, short_interest
+### - Vérification de fraîcheur : basée sur data_date ou cached_at
+### - Marqueurs vides : TTL réduit à 15 min pour éviter les refetch inutiles
+###
+### Comment tester :
+### 1. Faire une première requête → devrait appeler l'API et stocker dans Supabase
+### 2. Faire une deuxième requête immédiatement → devrait utiliser le cache (cached: true)
+### 3. Vérifier dans les logs CloudWatch : "Using cached..." vs "Fetching fresh..."
+###
+### Voir section "TESTS CACHE INTÉGRÉ" pour des tests détaillés
+
+### ============================================
 ### NOTES
 ### ============================================
 ###
@@ -794,6 +859,20 @@ GET {{baseUrlMain}}/attribution/institution/0001364742/ticker/NVDA?period=3M
 Authorization: Bearer {{accessToken}}
 
 ###
+### UW MARKET - Top Net Impact
+### Récupère les tickers avec le plus grand impact net (options flow)
+GET {{baseUrlData}}/unusual-whales/market/top-net-impact?limit=1000
+Authorization: Bearer {{accessToken}}
+
+### Top Net Impact avec date spécifique
+GET {{baseUrlData}}/unusual-whales/market/top-net-impact?date=2025-12-09&limit=50
+Authorization: Bearer {{accessToken}}
+
+### Top Net Impact - Top 20
+GET {{baseUrlData}}/unusual-whales/market/top-net-impact?limit=20
+Authorization: Bearer {{accessToken}}
+
+###
 ### UW ECONOMIC-CALENDAR 
 GET {{baseUrlData}}/unusual-whales/market/economic-calendar?limit=500
 Authorization: Bearer {{accessToken}}
@@ -826,6 +905,25 @@ Authorization: Bearer {{accessToken}}
 ### - Berkshire Hathaway: 0001697748
 ### - BlackRock: 0001364742
 ### - Vanguard: 0000102909
+
+### ============================================
+### UNUSUAL WHALES - Institutions List
+### ============================================
+
+### GET /unusual-whales/institutions - Liste des institutions
+### Récupère la liste des institutions avec tri par total_value (desc)
+### Supporte limit jusqu'à 1000
+GET {{baseUrlData}}/unusual-whales/institutions?limit=1000&order=total_value&order_direction=desc
+Authorization: Bearer {{accessToken}}
+
+### GET /unusual-whales/institutions - Top 100 par total_value
+GET {{baseUrlData}}/unusual-whales/institutions?limit=100&order=total_value&order_direction=desc
+Authorization: Bearer {{accessToken}}
+
+### GET /unusual-whales/institutions - Top 100 par total_value
+### GET /unusual-whales/institutions - Recherche par nom
+GET {{baseUrlData}}/unusual-whales/institutions?name=VANGUARD&limit=10
+Authorization: Bearer {{accessToken}}
 ###
 ### Si une requête avec un nom d'institution retourne une erreur 500,
 ### essayez d'utiliser le CIK à la place.
@@ -918,37 +1016,34 @@ Content-Type: application/json
   "period": "3M"
 }
 
-###
-### Analyser l'activité globale d'un ticker (À ENRICHIR - Phase 1.5/1.6)
-### 100% DYNAMIQUE : Récupère automatiquement Options Flow, Dark Pool, Insiders, Short Interest, Institutional Ownership, News, Events, Quote
-### ⏳ PROCHAINES AMÉLIORATIONS :
-### - Options Flow détaillé (toutes les métriques enrichies)
-### - Dark Pool Intelligence (patterns, institutions)
-### - Insiders détaillé (transactions, patterns, timing)
-### - Short Interest Trends (évolution, FTDs)
-### - Signal Consensus Analysis
-### - Multi-Scenario Prediction
-### - Entry Strategy Recommendations
+### DARKP POOL TRADES
+GET {{baseUrlData}}/unusual-whales/dark-pool/TSLA?limit=30
+Authorization: Bearer {{accessToken}}
+
+### DARKP POOL TRADES
+GET {{baseUrlData}}/unusual-whales/dark-pool/recent
+Authorization: Bearer {{accessToken}}
+### ============================================
+### TICKER ACTIVITY ANALYSIS - Endpoints Séparés
+### ============================================
+### ✨ NOUVEAU : Cache intégré directement dans le service UW
+### Les méthodes UW (getRecentFlows, getDarkPoolTrades, getShortInterestAndFloat)
+### vérifient automatiquement le cache dans Supabase avant d'appeler l'API
+
+### ✅ Ticker Activity Analysis (BASE - Rapide)
+### Analyse de base : Options Flow, Dark Pool, Insiders, Short Interest
+### ✨ Cache intégré : Les données sont automatiquement mises en cache dans Supabase
+### Temps estimé : ~8-10 secondes (première fois), ~2-3 secondes (cache hit)
 POST {{baseUrlMain}}/ai/ticker-activity-analysis
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
+
 
 {
   "ticker": "NVDA"
 }
 
-###
-### Test Ticker Activity avec AAPL
-POST {{baseUrlMain}}/ai/ticker-activity-analysis
-Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{
-  "ticker": "AAPL"
-}
-
-###
-### Test Ticker Activity avec TSLA
+### ✅ Ticker Activity Analysis - TSLA (test cache)
 POST {{baseUrlMain}}/ai/ticker-activity-analysis
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -957,41 +1052,445 @@ Content-Type: application/json
   "ticker": "TSLA"
 }
 
-###
-### Analyser l'activité d'un ticker avec données personnalisées
+### ✅ Ticker Activity Analysis - AAPL (test cache)
 POST {{baseUrlMain}}/ai/ticker-activity-analysis
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "ticker": "NVDA",
-  "data": {
-    "options_flow": {
-      "total_volume": 5000000,
-      "call_put_ratio": 9,
-      "unusual": true
-    },
-    "dark_pool": {
-      "total_volume": 10000000,
-      "largest_trade": 2000000
-    },
-    "insiders": {
-      "count": 3,
-      "net_buy_sell": "buy"
-    },
-    "short_interest": {
-      "short_interest": 50000000,
-      "float": 2000000000
-    },
-    "recent_news": [
-      "NVIDIA annonce de nouveaux partenariats",
-      "Augmentation des prévisions de revenus"
-    ],
-    "upcoming_events": [
-      "Earnings le 15/12",
-      "FDA decision le 20/12"
-    ]
-  }
+  "ticker": "AAPL"
+}
+
+### ✅ Ticker Options Analysis (ENRICHI - Options détaillées)
+### Analyse approfondie des options : OI changes, IV, Greeks, Max Pain, Volume Profile
+### Temps estimé : ~10-12 secondes
+POST {{baseUrlMain}}/ai/ticker-options-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### ✅ Ticker Institutional Analysis (ENRICHI - Institutionnel)
+### Analyse institutionnelle : Ownership, changements, patterns
+### Temps estimé : ~3-5 secondes
+POST {{baseUrlMain}}/ai/ticker-institutional-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+### ✅ Ticker News & Events Analysis (ENRICHI - News & Events)
+### Analyse des news et événements : Earnings, FDA, news sentiment
+### Temps estimé : ~4-6 secondes
+POST {{baseUrlMain}}/ai/ticker-news-events-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "AVGO"
+}
+
+### 🗑️ Invalider le cache pour un ticker (NVDA)
+### ⚠️ Note : Le cache est maintenant géré dans Supabase (options_flow, dark_pool_trades, short_interest)
+### Pour invalider manuellement, supprimez les entrées dans Supabase ou attendez l'expiration du TTL
+DELETE {{baseUrlMain}}/ai/cache/invalidate/NVDA
+Authorization: Bearer {{accessToken}}
+
+### 🗑️ Invalider le cache pour un ticker (AVGO)
+DELETE {{baseUrlMain}}/ai/cache/invalidate/AVGO
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### 🏗️ ARCHITECTURE MODULAIRE - Tests d'Ingestion
+### ============================================
+### ✨ NOUVEAU : Architecture 3 couches (Collecte → Analyses → Synthèse)
+### 
+### Routes d'ingestion disponibles :
+### - POST /ingest/options-flow?ticker=NVDA : Ingérer options flow
+### - POST /ingest/options-volume?ticker=NVDA : Ingérer options volume
+### - POST /ingest/dark-pool?ticker=NVDA : Ingérer dark pool
+### - POST /ingest/short-interest?ticker=NVDA : Ingérer short interest
+### - POST /ingest/price-action?ticker=NVDA : Ingérer price action
+### - POST /ingest/all?ticker=NVDA&modules=options_flow,dark_pool : Ingérer plusieurs modules
+### - GET /ingest/status?ticker=NVDA : Vérifier l'état des modules
+###
+### ✅ API Gateway 1 (Application Principale)
+
+### Test Ingestion 1: Vérifier l'état des modules pour NVDA
+### Devrait retourner l'état de tous les modules (status, fetched_at, expires_at, refresh_lock_until)
+GET {{baseUrlMain}}/ingest/status?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 2: Ingérer options flow pour NVDA
+### Devrait :
+### - Vérifier shouldSkip() (skip si fresh ou refreshing avec lock valide)
+### - Acquérir un verrou atomique
+### - Appeler l'API UW
+### - Stocker dans options_flow (via TickerDataPersistenceService)
+### - Finaliser avec finalizeModuleRefresh() (libère lock + update status)
+### - Utiliser TTL depuis analysis_catalog (pas hardcodé)
+
+### Test API UW flow-recent (pour vérifier la structure des données)
+### Note: Les routes /unusual-whales/* sont sur l'API Gateway 2 (baseUrlData), pas baseUrlMain
+GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent
+Authorization: Bearer {{accessToken}}
+
+
+### Test Ingestion 1: Ingérer options flow pour NVDA
+POST {{baseUrlMain}}/ingest/options-flow?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Analyse: Analyser les données d'options flow stockées dans Supabase
+### Lit depuis la base et fait une analyse IA
+POST {{baseUrlMain}}/analyze/options-flow?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 3: Ingérer options volume pour NVDA
+### Devrait stocker dans la table dédiée options_volume (data_date NOT NULL)
+POST {{baseUrlMain}}/ingest/options-volume?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 4: Ingérer dark pool pour NVDA
+POST {{baseUrlMain}}/ingest/dark-pool?ticker=NVDA&limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 5: Ingérer short interest pour NVDA
+POST {{baseUrlMain}}/ingest/short-interest?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 6: Ingérer price action pour NVDA
+POST {{baseUrlMain}}/ingest/price-action?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 6c: Ingérer price context (SMA20/50 + range 5j) pour NVDA
+POST {{baseUrlMain}}/ingest/price-context?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 6b: Ingérer earnings historiques pour NVDA
+POST {{baseUrlMain}}/ingest/earnings?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test INgestion greek
+POST {{baseUrlMain}}/ingest/greeks?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 7: Ingérer plusieurs modules en parallèle pour NVDA
+### Devrait ingérer options_flow, dark_pool, short_interest, price_action, price_context, earnings en parallèle
+POST {{baseUrlMain}}/ingest/all?ticker=NVDA&modules=options_flow,dark_pool,short_interest,price_action,price_context,earnings
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 8: Vérifier l'état après ingestion
+### Devrait montrer status='ready' pour les modules ingérés
+GET {{baseUrlMain}}/ingest/status?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 9: Test "skip if fresh" - Réingérer immédiatement
+### Devrait skip l'ingestion (shouldSkip() retourne true car fresh)
+### Vérifier dans les logs : "Skipping ingestion (fresh or refreshing)"
+POST {{baseUrlMain}}/ingest/options-flow?ticker=NVDA&limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test Ingestion 10: Test verrous atomiques - Requêtes concurrentes
+### Faire 3 requêtes simultanées pour le même module
+### Seule la première devrait acquérir le lock, les autres devraient skip
+### Vérifier dans les logs : "Refresh lock already held, skipping ingestion"
+POST {{baseUrlMain}}/ingest/options-flow?ticker=TSLA&limit=30
+Authorization: Bearer {{accessToken}}
+
+POST {{baseUrlMain}}/ingest/options-flow?ticker=TSLA&limit=30
+Authorization: Bearer {{accessToken}}
+
+POST {{baseUrlMain}}/ingest/options-flow?ticker=TSLA&limit=30
+Authorization: Bearer {{accessToken}}
+### Test Spot Exposures By Strike And Expiry
+GET {{baseUrlData}}/unusual-whales/stock/TSLA/spot-exposures/strike
+Authorization: Bearer {{accessToken}}
+### Test Spot Exposures By Strike
+GET {{baseUrlData}}/unusual-whales/stock/TSLA/spot-exposures/expiry-strike
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### TESTS CACHE INTÉGRÉ - Service UW
+### ============================================
+### ✨ Tests pour vérifier que le cache fonctionne correctement
+### Le cache est maintenant intégré directement dans les méthodes UW
+### 
+### ⚠️ IMPORTANT : Avec la nouvelle architecture modulaire, le cache est géré via :
+### - ticker_data_modules (état des modules : status, fetched_at, expires_at)
+### - options_flow, dark_pool_trades, short_interest (données brutes)
+### - analysis_catalog (TTL dynamiques par module)
+
+### Test 1: Recent Flows avec cache (première requête = API, deuxième = cache)
+### Première requête : devrait appeler l'API et stocker dans options_flow
+GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête (immédiatement après) : devrait utiliser le cache
+GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test 2: Dark Pool avec cache
+### Première requête : devrait appeler l'API et stocker dans dark_pool_trades
+GET {{baseUrlData}}/unusual-whales/dark-pool/NVDA?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête : devrait utiliser le cache
+GET {{baseUrlData}}/unusual-whales/dark-pool/NVDA?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test 3: Short Interest avec cache
+### Première requête : devrait appeler l'API et stocker dans short_interest
+GET {{baseUrlData}}/unusual-whales/shorts/NVDA/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête : devrait utiliser le cache
+GET {{baseUrlData}}/unusual-whales/shorts/NVDA/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Test 4: Ticker Activity Analysis avec cache intégré
+### Première requête : devrait appeler les APIs et stocker dans Supabase
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Deuxième requête (immédiatement après) : devrait utiliser le cache pour options_flow, dark_pool, short_interest
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Test 5: Comparaison avec Options Flow Analysis (qui appelle directement l'API)
+### Cette route devrait aussi bénéficier du cache maintenant
+POST {{baseUrlMain}}/ai/options-flow-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Test 6: Vérifier que le cache fonctionne pour plusieurs tickers
+### TSLA - Première requête (devrait appeler l'API)
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+### Test FMP SEC Filings Profile
+
+GET {{baseUrlData}}/fmp/sec-filings/profile/TSLA
+Authorization: Bearer {{accessToken}}
+
+### Test FMP SEC Filings Profile
+GET {{baseUrlData}}/fmp/quote/TSLA
+Authorization: Bearer {{accessToken}}
+
+### Test FMP Grades
+GET {{baseUrlData}}/fmp/grades/TSLA
+Authorization: Bearer {{accessToken}}
+
+### Test FMP Grades Historical
+
+GET {{baseUrlData}}/fmp/grades-historical/TSLA?limit=100
+Authorization: Bearer {{accessToken}}
+
+### Test FMP Grades Consensus
+GET {{baseUrlData}}/fmp/grades-consensus/TSLA
+Authorization: Bearer {{accessToken}}
+
+### /fmp/insider-trading/latest
+GET {{baseUrlData}}/fmp/insider-trading/latest
+Authorization: Bearer {{accessToken}}
+
+### Test FMP Grades Consensus
+GET {{baseUrlData}}/fmp/price-target-consensus/TSLA
+Authorization: Bearer {{accessToken}}
+
+### Test FMP Signals
+GET https://nmynjtrppwhiwlxfdzdh.supabase.co/rest/v1/fmp_signals?select=*&order=timestamp.desc&limit=10&ticker=TSLA
+Authorization: Bearer {{accessToken}}
+
+
+### TSLA - Deuxième requête (devrait utiliser le cache)
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+### Test 7: Vérifier les réponses contiennent l'indicateur "cached"
+### Les réponses des méthodes UW devraient maintenant inclure "cached: true" si depuis le cache
+### Vérifier dans la réponse : { "success": true, "cached": true, ... }
+GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### 🧪 TESTS ARCHITECTURE MODULAIRE - Validation
+### ============================================
+### Tests pour valider la nouvelle architecture 3 couches
+### 
+### ✅ CORRECTIONS APPLIQUÉES :
+### - Lock atomique (acquire_refresh_lock)
+### - Skip if fresh + refreshing_effective
+### - finalize_module_refresh (1 transaction)
+### - options_volume data_date NOT NULL
+### - get_or_create_job simplifié
+### - TTL depuis analysis_catalog (pas hardcodés)
+### - shouldSkip() vérifie refresh_lock_until
+### - unit_analyses UNIQUE avec contraintes partielles
+### 
+### Objectifs des tests :
+### 1. Vérifier que les routes d'analyse utilisent le cache modulaire
+### 2. Vérifier que les TTL sont respectés (via analysis_catalog)
+### 3. Vérifier que les verrous fonctionnent (pas de cache stampede)
+### 4. Vérifier que shouldSkip() fonctionne (fresh/refreshing)
+### 5. Vérifier que finalizeModuleRefresh() libère les locks
+### 6. Vérifier que les timeouts sont évités
+
+### Test Architecture 1: Ticker Activity Analysis (utilise le nouveau système)
+### Cette route devrait maintenant :
+### - Vérifier l'état des modules via ticker_data_modules
+### - Utiliser shouldSkip() pour éviter les refetch inutiles
+### - Lire les TTL depuis analysis_catalog (pas hardcodés)
+### - Gérer les verrous atomiques pour éviter cache stampede
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Test Architecture 2: Vérifier que le cache est utilisé (2ème requête immédiate)
+### Devrait retourner rapidement (cache hit) avec "cached: true"
+### Vérifier dans les logs CloudWatch : "Skipping ingestion (fresh or refreshing)"
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Test Architecture 3: Options Flow Analysis (doit aussi utiliser le système modulaire)
+### Vérifier que cette route bénéficie du cache modulaire
+POST {{baseUrlMain}}/ai/options-flow-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "TSLA"
+}
+
+### Test Architecture 4: Institution Moves Analysis (doit respecter les timeouts)
+### Cette route devrait maintenant être optimisée pour éviter les timeouts
+### Vérifier que la réponse arrive en < 20s
+POST {{baseUrlMain}}/ai/institution-moves-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "institution_cik": "0001364742",
+  "institution_name": "BLACKROCK, INC.",
+  "period": "3M"
+}
+
+### Test Architecture 5: Vérifier les données UW avec cache intégré
+### Ces routes utilisent maintenant le cache via UnusualWhalesService
+### Première requête : API call + stockage dans Supabase
+GET {{baseUrlData}}/unusual-whales/stock/AAPL/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête : Cache hit (devrait être rapide)
+GET {{baseUrlData}}/unusual-whales/stock/AAPL/flow-recent?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test Architecture 6: Dark Pool avec cache modulaire
+### Première requête : API call
+GET {{baseUrlData}}/unusual-whales/dark-pool/AAPL?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête : Cache hit
+GET {{baseUrlData}}/unusual-whales/dark-pool/AAPL?limit=30
+Authorization: Bearer {{accessToken}}
+
+### Test Architecture 7: Short Interest avec cache modulaire
+### Première requête : API call
+GET {{baseUrlData}}/unusual-whales/shorts/AAPL/interest-float
+Authorization: Bearer {{accessToken}}
+
+### Deuxième requête : Cache hit
+GET {{baseUrlData}}/unusual-whales/shorts/AAPL/interest-float
+Authorization: Bearer {{accessToken}}
+### Test Spot Exposures By Strike And Expiry
+GET {{baseUrlData}}/unusual-whales/stock/TSLA/options-volume
+Authorization: Bearer {{accessToken}}
+### alert pour test
+GET {{baseUrlData}}/unusual-whales/alerts?ticker=TSLA
+Authorization: Bearer {{accessToken}}
+### ============================================
+### 📊 VALIDATION DES CORRECTIONS PROD
+### ============================================
+### Tests pour valider les corrections critiques appliquées :
+### 
+### ✅ FIX #1: unit_analyses UNIQUE avec data_date NULL (contraintes partielles)
+### ✅ FIX #2: refreshing_effective (lock valide uniquement)
+### ✅ FIX #3: acquire_refresh_lock gère les locks expirés
+### ✅ FIX #4: options_volume date supprimée (garder data_date)
+### ✅ FIX #5: Index expires_at ajoutés
+### ✅ FIX #6: TTL depuis analysis_catalog (pas hardcodés)
+### ✅ FIX #7: shouldSkip() vérifie refresh_lock_until
+
+### Test Validation 1: Ticker Activity Analysis avec données complètes
+### Vérifier que toutes les données sont présentes (pas de "missing data")
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
+}
+
+### Test Validation 2: Vérifier que les timeouts sont respectés
+### Institution Moves Analysis ne devrait plus timeout après 20s
+POST {{baseUrlMain}}/ai/institution-moves-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "institution_cik": "0000102909",
+  "institution_name": "VANGUARD GROUP INC",
+  "period": "3M"
+}
+
+### Test Validation 3: Vérifier que le cache invalidation fonctionne
+### Après invalidation, la prochaine requête devrait refetch
+DELETE {{baseUrlMain}}/ai/cache/invalidate/NVDA
+Authorization: Bearer {{accessToken}}
+
+### Puis refaire une requête (devrait refetch)
+POST {{baseUrlMain}}/ai/ticker-activity-analysis
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "ticker": "NVDA"
 }
 
 ###

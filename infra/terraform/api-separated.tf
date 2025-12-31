@@ -126,3 +126,7 @@ resource "aws_apigatewayv2_integration" "api_ai_heavy" {
 # - POST /ai/ticker-institutional-analysis -> api_fast
 # - POST /ai/institution-moves-analysis -> api_ai_heavy
 
+
+
+
+

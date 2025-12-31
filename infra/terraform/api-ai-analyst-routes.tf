@@ -110,6 +110,17 @@ resource "aws_apigatewayv2_route" "post_ai_economic_calendar_analysis" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# POST /ai/flow-options-analysis-pro
+resource "aws_apigatewayv2_route" "post_ai_flow_options_analysis_pro" {
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = "POST /ai/flow-options-analysis-pro"
+
+  target = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 
 
 
