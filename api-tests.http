@@ -19,7 +19,7 @@
 @baseUrlData = https://faq9dl95v7.execute-api.eu-west-3.amazonaws.com/prod
 
 ### Token d'accès (à mettre à jour régulièrement)
-@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6IjU2YjI5ZDdjLWFhMDQtNDc2Yi05MDFlLWYzZGYxZTE5ZGU3MyIsImV2ZW50X2lkIjoiYzMzMzg5ZjItYzYyMy00NTc2LTg4ZDgtOWU0YjlmNDMwNDA5IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzI2Njg0NywiZXhwIjoxNzY3MjcwNDQ3LCJpYXQiOjE3NjcyNjY4NDcsImp0aSI6IjE0ZGE0NTQxLTE2ODItNDhkOS1iNTIxLTVhZTYxNjUxYmJkMSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.iqy7Uso6qIhtzDtPJRcAcYKoGhq9Hm-mHW_Ug4mCh-CsCNFdl-0F29PRrIBT_GLim6QuUSOMR8hQpAGlt1xblrr52XDIb5cpJUIV-2sbkmrfT9__GnzOimDnIky3Tsox2FgTTzw1YX963Nwq4lmTMejBOp2MrxOP2AFYcnbaP4lpUcdXjeID1Oh_Gm7mF3vP4s68O-5S1VFj6D5VPt5A7bkQvryEoxf90EJR-9PMiFSEBFeh1bM-pkKzzeL7n_2Lvl1SUNu_x_QcHHgWoeWJZCew35AcGQcxqcyURoNEZdqmobHLQUoGmXhLwQ3-bU7r3RggUhS0xjMOwyKGDGsXWw
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImYyZGI1YjE5LTI5NWMtNDlhMy04MWI1LWRkNTM2NGU3ZWY3YiIsImV2ZW50X2lkIjoiMTc5ZTQ4OTgtZThlOS00NzAxLWJmMWMtZmJkYzk5NTIwMDAxIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzI3NzYxMywiZXhwIjoxNzY3MjgxMjEzLCJpYXQiOjE3NjcyNzc2MTMsImp0aSI6Ijc2ZGZmN2NmLTU1YjYtNDQzMy1hZDg3LTdjMjg3Y2JmZmQ2NSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.M_A57qHF6epdlXbM_O5ZMwFNzG5170L0x6x65eLHI7KLPGCD7HkwOJnb_W5Ug4cNr3lJ5A-_fs3kEA-2lFc2OqC8iD7AA3XTYwASvr7dPLq4umZXoLc89AfO56BAk1QkPd0BPhgGulpBPBYVFcyj9jAcTlCLFx8mth3vgdPtrITc4Ntzu19XgkeXbQZnbvCXMhVe4AFjEtBefF-s10zxcWEuFrICzL3gcGxEol_Ef-rKmBdxivj6WCLvjHAvtVQd5uMqZz3lK_FD1wW7SamHSu98qNRzk3NA5a0owyrGnI51Bs8LVH9s-RTYfHK3eFUCmBnHTNiYBg_SBMeOlAkUlw
 /fmp/insider-trading/latest@watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
 ### ============================================
 ### ANALYSE COMBINÉE (FMP + UW)
@@ -195,7 +195,7 @@ GET {{baseUrlData}}/unusual-whales/stock/SPXW/insider-buy-sells
 Authorization: Bearer {{accessToken}}
 
 ### Institution Activity - Activité institutionnelle
-GET {{baseUrlData}}/unusual-whales/institution/AAPL/activity?limit=100
+GET {{baseUrlData}}/unusual-whales/institution/SPXW/activity?limit=100
 Authorization: Bearer {{accessToken}}
 
 ### ============================================
@@ -1188,6 +1188,34 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrlMain}}/ingest/status?ticker=NVDA
 Authorization: Bearer {{accessToken}}
 
+### ============================================
+### CONVERGENCE & RISQUE DE LIQUIDATION
+### ============================================
+
+### Analyse Convergence Risk - Basique (NVDA)
+POST {{baseUrlMain}}/analyze/convergence-risk?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### Analyse Convergence Risk - Avec paramètres personnalisés
+POST {{baseUrlMain}}/analyze/convergence-risk?ticker=NVDA&darkPoolLimit=100&optionsLimit=200&minPremium=50000&expiryFilter=2026-01-16
+Authorization: Bearer {{accessToken}}
+
+### Analyse Convergence Risk - Avec body JSON (override query params)
+POST {{baseUrlMain}}/analyze/convergence-risk?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "darkPoolLimit": 150,
+  "optionsLimit": 300,
+  "minPremium": 100000,
+  "expiryFilter": "tomorrow",
+  "liquidationThreshold": 0.01
+}
+
+### Analyse Convergence Risk - Filtre expiration "next_week"
+POST {{baseUrlMain}}/analyze/convergence-risk?ticker=AAPL&expiryFilter=next_week
+Authorization: Bearer {{accessToken}}
 ### Test Ingestion 9: Test "skip if fresh" - Réingérer immédiatement
 ### Devrait skip l'ingestion (shouldSkip() retourne true car fresh)
 ### Vérifier dans les logs : "Skipping ingestion (fresh or refreshing)"

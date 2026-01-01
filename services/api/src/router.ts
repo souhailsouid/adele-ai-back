@@ -36,6 +36,7 @@ import { smartMoneyRoutes } from "./routes/smart-money.routes";
 import { attributionRoutes } from "./routes/attribution.routes";
 import { aiAnalystRoutes } from "./routes/ai-analyst.routes";
 import { flowAlertsIngestionRoutes } from "./routes/flow-alerts-ingestion.routes";
+import { convergenceRiskRoutes } from "./routes/convergence-risk.routes";
 import { getCombinedEconomicCalendar } from "./economic-calendar";
 import { getLatest13FFilings } from "./13f-filings";
 import type { NotificationType } from "./types/unusual-whales/alerts";
@@ -530,6 +531,8 @@ const routes: Route[] = [
       ...aiAnalystRoutes,
       // ========== Flow Alerts Ingestion Routes ==========
       ...flowAlertsIngestionRoutes,
+      // ========== Convergence Risk Routes ==========
+      ...convergenceRiskRoutes,
       // ========== Unusual Whales API Routes ==========
       {
         method: "GET",
