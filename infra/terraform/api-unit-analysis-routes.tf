@@ -41,6 +41,16 @@ resource "aws_apigatewayv2_route" "post_analyze_all" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# POST /analyze/convergence-risk?ticker=NVDA
+# Analyser la convergence et le risque de liquidation
+resource "aws_apigatewayv2_route" "post_analyze_convergence_risk" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /analyze/convergence-risk"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 # ============================================
 # Routes de récupération des résultats
 # ============================================
