@@ -11,20 +11,49 @@ import { extractStructuredData } from "./data-extractor";
 const eventBridge = new EventBridgeClient({});
 const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME || "";
 
+// Helper function pour détecter la plateforme depuis l'URL
+function detectPlatform(url: string, feedName?: string, category?: string): 'youtube' | 'twitter' | 'truth-social' | 'rss' {
+  if (url.includes('youtube.com/feeds/videos.xml')) {
+    return 'youtube';
+  }
+  // Truth Social (Trump)
+  if (url.includes('trumpstruth.org') || category === 'trump-truth-social') {
+    return 'truth-social';
+  }
+  // Twitter/X
+  if (url.includes('x.com') || url.includes('twitter.com')) {
+    return 'twitter';
+  }
+  // Les feeds RSS via rss.app qui pointent vers Twitter/X
+  // Détectés par le nom du feed (personalities, social avec "twitter", ou contient "twitter")
+  if (url.includes('rss.app') && (
+    feedName?.includes('twitter') || 
+    category?.includes('twitter') ||
+    feedName === 'personalities' ||
+    (feedName === 'social' && category !== 'trump-truth-social')
+  )) {
+    return 'twitter';
+  }
+  return 'rss';
+}
+
 // Helper function pour transformer un objet de catégories en array plat
 function flattenFeeds(
   feedsByCategory: Record<string, string[]>,
   baseName: string,
-  baseType: string
-): Array<{ url: string; name: string; type: string }> {
-  const result: Array<{ url: string; name: string; type: string }> = [];
+  baseType: string,
+  platformOverride?: 'youtube' | 'twitter' | 'truth-social' | 'rss'
+): Array<{ url: string; name: string; type: string; platform: 'youtube' | 'twitter' | 'truth-social' | 'rss' }> {
+  const result: Array<{ url: string; name: string; type: string; platform: 'youtube' | 'twitter' | 'truth-social' | 'rss' }> = [];
   
   for (const [category, urls] of Object.entries(feedsByCategory)) {
     for (const url of urls) {
+      const platform = platformOverride || detectPlatform(url, baseName, category);
       result.push({
         url,
         name: baseName,
         type: `${baseType}-${category}`,
+        platform,
       });
     }
   }
@@ -78,10 +107,116 @@ const barchartFeeds = flattenFeeds(
   "commodities"
 );
 
+// 🔴 BREAKING NEWS / ACTUALITÉ GLOBALE (haute priorité)
+// Reuters feeds
+const reutersFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UChqUTb7kYRX8-EiaN3XFrSQ"],
+  },
+  "reuters",
+  "breaking-news",
+  "youtube"
+);
+
+// Bloomberg feeds
+const bloombergFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UCIALMKvObZNtJ6AmdCLP7Lg"],
+    "main": ["https://rss.app/feed/9tI7t33DqzGNReOh"],
+    "asia": ["https://rss.app/feeds/5FXpLHZk8F5bVA9u.xml"],
+    "business": ["https://rss.app/feeds/uBH1hTaHLOnbrTM8.xml"],
+  },
+  "bloomberg",
+  "breaking-news"
+);
+
+// 🏦 PRESSE FINANCIÈRE & ANALYSE PROFONDE
+const financialPressFeeds = flattenFeeds(
+  {
+    "financial-times": ["https://www.ft.com/rss/home/international"],
+    "wsj-markets": ["https://feeds.a.dj.com/rss/RSSMarketsMain.xml"],
+    "wsj-world": ["https://feeds.a.dj.com/rss/RSSWorldNews.xml"],
+  },
+  "financial-press",
+  "analysis"
+);
+
+// 📊 MARCHÉS / TRADING / INVESTISSEMENT
+const tradingFeeds = flattenFeeds(
+  {
+    "zerohedge": ["https://feeds.feedburner.com/zerohedge/feed"],
+    "benzinga": ["https://rss.app/feeds/3bXt36o83LvEh9Xi.xml"],
+    "gurufocus": ["https://rss.app/feeds/fKI0hyT44w1BoBjS.xml"],
+  },
+  "trading",
+  "markets"
+);
+
+// 🧠 PERSONNALITÉS & INVESTISSEURS (X/Twitter via RSS)
+const personalitiesFeeds = flattenFeeds(
+  {
+    "elon-musk": ["https://rss.app/feeds/MM1Ft6p47CrWRLv7.xml"],
+    "bill-ackman": ["https://rss.app/feeds/wRnvS6NoWO3U1Vht.xml"],
+    "carl-icahn": ["https://rss.app/feeds/gOdIsDhsyuMp8k12.xml"],
+    "cathie-wood": ["https://rss.app/feeds/mv4INhZLqWWprxKU.xml"],
+    "michael-saylor": ["https://rss.app/feeds/WPjfJUIqLwBph8YJ.xml"],
+  },
+  "personalities",
+  "social",
+  "twitter"
+);
+
+// 🏛️ INSTITUTIONS & MACRO
+const institutionsFeeds = flattenFeeds(
+  {
+    "federal-reserve": ["https://rss.app/feeds/SsYbZTdshv5Q8zAs.xml"],
+    "bloomberg-asia": ["https://rss.app/feeds/Y92j5UrFW17y4TaE.xml"],
+  },
+  "institutions",
+  "macro"
+);
+
+// 🧠 REAL VISION / ANALYSE MACRO
+const realVisionFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UCGXWKlq1Oxr3ddEtmKhAkPg"],
+  },
+  "real-vision",
+  "macro",
+  "youtube"
+);
+
+// 🌍 RÉSEAUX SOCIAUX (ARCHIVÉS VIA RSS)
+const socialFeeds = flattenFeeds(
+  {
+    "bloomberg-twitter": ["https://rss.app/feeds/Y92j5UrFW17y4TaE.xml"],
+    "trump-truth-social": ["https://trumpstruth.org/feed"],
+    "reuters-twitter": ["https://rss.app/feeds/l2evN2IEPuMBrjGc.xml"],
+  },
+  "social",
+  "social"
+);
+
 const RSS_FEEDS = [
   ...investingFeeds,
   ...barchartFeeds,
-  { url: "https://www.financialjuice.com/feed.ashx?xy=rss", name: "financial-juice", type: "macro" },
+  { url: "https://www.financialjuice.com/feed.ashx?xy=rss", name: "financial-juice", type: "macro", platform: "rss" as const },
+  // 🔴 BREAKING NEWS / ACTUALITÉ GLOBALE
+  ...reutersFeeds,
+  ...bloombergFeeds,
+  { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html", name: "cnbc", type: "breaking-news", platform: "rss" as const },
+  // 🏦 PRESSE FINANCIÈRE & ANALYSE PROFONDE
+  ...financialPressFeeds,
+  // 📊 MARCHÉS / TRADING / INVESTISSEMENT
+  ...tradingFeeds,
+  // 🧠 PERSONNALITÉS & INVESTISSEURS (Twitter/X)
+  ...personalitiesFeeds,
+  // 🏛️ INSTITUTIONS & MACRO
+  ...institutionsFeeds,
+  // 🧠 REAL VISION / ANALYSE MACRO
+  ...realVisionFeeds,
+  // 🌍 RÉSEAUX SOCIAUX (Twitter/X + Truth Social)
+  ...socialFeeds,
 ];
 export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) => {
   console.log("RSS Collector triggered");
@@ -103,7 +238,7 @@ export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) =
   }
 };
 
-async function collectRSSFeed(feed: { url: string; name: string; type: string }) {
+async function collectRSSFeed(feed: { url: string; name: string; type: string; platform: 'youtube' | 'twitter' | 'truth-social' | 'rss' }) {
   console.log(`Fetching RSS feed: ${feed.name}`);
 
   const response = await fetch(feed.url, {
@@ -165,6 +300,7 @@ async function collectRSSFeed(feed: { url: string; name: string; type: string })
           url: item.link,
           guid: item.guid, // Stocker le guid pour déduplication future
           feed: feed.name,
+          platform: feed.platform, // NOUVEAU : Plateforme (youtube, twitter, rss)
           author: item.author,
           // NOUVEAU : Données structurées extraites
           extracted_data: extractedData || null,

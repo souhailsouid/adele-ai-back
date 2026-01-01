@@ -78,10 +78,113 @@ const barchartFeeds = flattenFeeds(
   "commodities"
 );
 
+// 🔴 BREAKING NEWS / ACTUALITÉ GLOBALE (haute priorité)
+// Reuters feeds
+const reutersFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UChqUTb7kYRX8-EiaN3XFrSQ"],
+  },
+  "reuters",
+  "breaking-news"
+);
+
+// Bloomberg feeds
+const bloombergFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UCIALMKvObZNtJ6AmdCLP7Lg"],
+    "main": ["https://rss.app/feed/9tI7t33DqzGNReOh"],
+    "asia": ["https://rss.app/feeds/5FXpLHZk8F5bVA9u.xml"],
+    "business": ["https://rss.app/feeds/uBH1hTaHLOnbrTM8.xml"],
+  },
+  "bloomberg",
+  "breaking-news"
+);
+
+// 🏦 PRESSE FINANCIÈRE & ANALYSE PROFONDE
+const financialPressFeeds = flattenFeeds(
+  {
+    "financial-times": ["https://www.ft.com/rss/home/international"],
+    "wsj-markets": ["https://feeds.a.dj.com/rss/RSSMarketsMain.xml"],
+    "wsj-world": ["https://feeds.a.dj.com/rss/RSSWorldNews.xml"],
+  },
+  "financial-press",
+  "analysis"
+);
+
+// 📊 MARCHÉS / TRADING / INVESTISSEMENT
+const tradingFeeds = flattenFeeds(
+  {
+    "zerohedge": ["https://feeds.feedburner.com/zerohedge/feed"],
+    "benzinga": ["https://rss.app/feeds/3bXt36o83LvEh9Xi.xml"],
+    "gurufocus": ["https://rss.app/feeds/fKI0hyT44w1BoBjS.xml"],
+  },
+  "trading",
+  "markets"
+);
+
+// 🧠 PERSONNALITÉS & INVESTISSEURS (X/Twitter via RSS)
+const personalitiesFeeds = flattenFeeds(
+  {
+    "elon-musk": ["https://rss.app/feeds/MM1Ft6p47CrWRLv7.xml"],
+    "bill-ackman": ["https://rss.app/feeds/wRnvS6NoWO3U1Vht.xml"],
+    "carl-icahn": ["https://rss.app/feeds/gOdIsDhsyuMp8k12.xml"],
+    "cathie-wood": ["https://rss.app/feeds/mv4INhZLqWWprxKU.xml"],
+    "michael-saylor": ["https://rss.app/feeds/WPjfJUIqLwBph8YJ.xml"],
+  },
+  "personalities",
+  "social"
+);
+
+// 🏛️ INSTITUTIONS & MACRO
+const institutionsFeeds = flattenFeeds(
+  {
+    "federal-reserve": ["https://rss.app/feeds/SsYbZTdshv5Q8zAs.xml"],
+    "bloomberg-asia": ["https://rss.app/feeds/Y92j5UrFW17y4TaE.xml"],
+  },
+  "institutions",
+  "macro"
+);
+
+// 🧠 REAL VISION / ANALYSE MACRO
+const realVisionFeeds = flattenFeeds(
+  {
+    "youtube": ["https://www.youtube.com/feeds/videos.xml?channel_id=UCGXWKlq1Oxr3ddEtmKhAkPg"],
+  },
+  "real-vision",
+  "macro"
+);
+
+// 🌍 RÉSEAUX SOCIAUX (ARCHIVÉS VIA RSS)
+const socialFeeds = flattenFeeds(
+  {
+    "bloomberg-twitter": ["https://rss.app/feeds/Y92j5UrFW17y4TaE.xml"],
+    "trump-truth-social": ["https://trumpstruth.org/feed"],
+    "reuters-twitter": ["https://rss.app/feeds/l2evN2IEPuMBrjGc.xml"],
+  },
+  "social",
+  "social"
+);
+
 const allFeeds = [
   ...investingFeeds,
   ...barchartFeeds,
   { url: "https://www.financialjuice.com/feed.ashx?xy=rss", name: "financial-juice", type: "macro" },
+  // 🔴 BREAKING NEWS / ACTUALITÉ GLOBALE
+  ...reutersFeeds,
+  ...bloombergFeeds,
+  { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html", name: "cnbc", type: "breaking-news" },
+  // 🏦 PRESSE FINANCIÈRE & ANALYSE PROFONDE
+  ...financialPressFeeds,
+  // 📊 MARCHÉS / TRADING / INVESTISSEMENT
+  ...tradingFeeds,
+  // 🧠 PERSONNALITÉS & INVESTISSEURS
+  ...personalitiesFeeds,
+  // 🏛️ INSTITUTIONS & MACRO
+  ...institutionsFeeds,
+  // 🧠 REAL VISION / ANALYSE MACRO
+  ...realVisionFeeds,
+  // 🌍 RÉSEAUX SOCIAUX
+  ...socialFeeds,
 ];
 
 // Créer un Record pour le test
@@ -106,6 +209,30 @@ async function testSingleFeed() {
       // Prendre le premier feed Barchart disponible
       feed = barchartFeeds[0];
       console.log(`ℹ️  Test du premier feed Barchart (${feed.type})\n`);
+    } else if (feedName === 'reuters' || feedName.startsWith('reuters')) {
+      feed = reutersFeeds[0];
+      console.log(`ℹ️  Test du premier feed Reuters (${feed.type})\n`);
+    } else if (feedName === 'bloomberg' || feedName.startsWith('bloomberg')) {
+      feed = bloombergFeeds[0];
+      console.log(`ℹ️  Test du premier feed Bloomberg (${feed.type})\n`);
+    } else if (feedName === 'financial-press' || feedName.startsWith('financial-press')) {
+      feed = financialPressFeeds[0];
+      console.log(`ℹ️  Test du premier feed Financial Press (${feed.type})\n`);
+    } else if (feedName === 'trading' || feedName.startsWith('trading')) {
+      feed = tradingFeeds[0];
+      console.log(`ℹ️  Test du premier feed Trading (${feed.type})\n`);
+    } else if (feedName === 'personalities' || feedName.startsWith('personalities')) {
+      feed = personalitiesFeeds[0];
+      console.log(`ℹ️  Test du premier feed Personalities (${feed.type})\n`);
+    } else if (feedName === 'institutions' || feedName.startsWith('institutions')) {
+      feed = institutionsFeeds[0];
+      console.log(`ℹ️  Test du premier feed Institutions (${feed.type})\n`);
+    } else if (feedName === 'real-vision' || feedName.startsWith('real-vision')) {
+      feed = realVisionFeeds[0];
+      console.log(`ℹ️  Test du premier feed Real Vision (${feed.type})\n`);
+    } else if (feedName === 'social' || feedName.startsWith('social')) {
+      feed = socialFeeds[0];
+      console.log(`ℹ️  Test du premier feed Social (${feed.type})\n`);
     }
   }
 
@@ -124,6 +251,15 @@ async function testSingleFeed() {
     console.log('   - investing (teste le premier feed Investing)');
     console.log('   - barchart (teste le premier feed Barchart)');
     console.log('   - financial-juice');
+    console.log('   - reuters (teste le premier feed Reuters)');
+    console.log('   - bloomberg (teste le premier feed Bloomberg)');
+    console.log('   - cnbc');
+    console.log('   - financial-press (teste le premier feed Financial Press)');
+    console.log('   - trading (teste le premier feed Trading)');
+    console.log('   - personalities (teste le premier feed Personalities)');
+    console.log('   - institutions (teste le premier feed Institutions)');
+    console.log('   - real-vision (teste le premier feed Real Vision)');
+    console.log('   - social (teste le premier feed Social)');
     process.exit(1);
   }
 

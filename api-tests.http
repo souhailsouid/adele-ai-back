@@ -19,7 +19,7 @@
 @baseUrlData = https://faq9dl95v7.execute-api.eu-west-3.amazonaws.com/prod
 
 ### Token d'accès (à mettre à jour régulièrement)
-@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImJlZWIyYWMzLWQ2ZDEtNGVlNi04ZjkyLTFmNWVhMGQ3NmU2YyIsImV2ZW50X2lkIjoiZTQzODVjNDYtYjNhOC00MjRjLTgzYjItYzRiMmU5MmZkZjU1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzEwMTM3MiwiZXhwIjoxNzY3MTA0OTcyLCJpYXQiOjE3NjcxMDEzNzIsImp0aSI6IjljNTA4YjNiLTZlZmYtNGU0YS05ODFhLTZmNDVhZThjMjZmYSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.rLnzJyE50724XzkXPPEB-Sht5FYymXU5lLV_s9qcyrBREctpsY7P5bMwwj5IonEp39MFQshnN-aSXbw_Mnkm9s5jqjt-W-81GAlf54Sy31JzJTaOTJTncWIiIBs-ZY0_NLhtpitlcKkw2yEAJHjj4XOTZRsFQckcbZVBrRBIGEKB2NJ5-WzjcD0RuVdXKP3AOjTfCZvtEcSIigfMnUgnTOc5rpPzLnRArdF5vi1Qj_orYy1x5Zl4bZ0fonDSo6N-oYi_-FuXytVpK9gDhJ7QFE-GyvdL3xoZ7RUbRWan_8eW-Z8fwYQ79SKOh9ijsywXg4BQnD2qtZSLWeT1q65XUg
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6IjU2YjI5ZDdjLWFhMDQtNDc2Yi05MDFlLWYzZGYxZTE5ZGU3MyIsImV2ZW50X2lkIjoiYzMzMzg5ZjItYzYyMy00NTc2LTg4ZDgtOWU0YjlmNDMwNDA5IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzI2Njg0NywiZXhwIjoxNzY3MjcwNDQ3LCJpYXQiOjE3NjcyNjY4NDcsImp0aSI6IjE0ZGE0NTQxLTE2ODItNDhkOS1iNTIxLTVhZTYxNjUxYmJkMSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.iqy7Uso6qIhtzDtPJRcAcYKoGhq9Hm-mHW_Ug4mCh-CsCNFdl-0F29PRrIBT_GLim6QuUSOMR8hQpAGlt1xblrr52XDIb5cpJUIV-2sbkmrfT9__GnzOimDnIky3Tsox2FgTTzw1YX963Nwq4lmTMejBOp2MrxOP2AFYcnbaP4lpUcdXjeID1Oh_Gm7mF3vP4s68O-5S1VFj6D5VPt5A7bkQvryEoxf90EJR-9PMiFSEBFeh1bM-pkKzzeL7n_2Lvl1SUNu_x_QcHHgWoeWJZCew35AcGQcxqcyURoNEZdqmobHLQUoGmXhLwQ3-bU7r3RggUhS0xjMOwyKGDGsXWw
 /fmp/insider-trading/latest@watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
 ### ============================================
 ### ANALYSE COMBINÉE (FMP + UW)
@@ -165,7 +165,7 @@ GET {{baseUrlData}}/unusual-whales/stock/NVDA/flow-recent?limit=30
 Authorization: Bearer {{accessToken}}
 
 ### Institution Ownership - Propriété institutionnelle
-GET {{baseUrlData}}/unusual-whales/institution/AAPL/ownership
+GET {{baseUrlData}}/unusual-whales/institution/SPXW/ownership
 Authorization: Bearer {{accessToken}}
 
 ### Short Interest and Float - Intérêt à découvert
@@ -178,12 +178,12 @@ GET {{baseUrlData}}/unusual-whales/shorts/NVDA/interest-float
 Authorization: Bearer {{accessToken}}
 
 ### Short Interest and Float - TSLA (test cache intégré)
-GET {{baseUrlData}}/unusual-whales/shorts/TSLA/interest-float
+GET {{baseUrlData}}/unusual-whales/shorts/SPXW/interest-float
 Authorization: Bearer {{accessToken}}
 
 ### Dark Pool Trades - Transactions dark pool
 ### ✨ Cache : Vérifie automatiquement dark_pool_trades avant d'appeler l'API
-GET {{baseUrlData}}/unusual-whales/dark-pool/AAPL?limit=50
+GET {{baseUrlData}}/unusual-whales/dark-pool/SPXW?limit=50
 Authorization: Bearer {{accessToken}}
 
 ### Dark Pool Trades - NVDA (test cache intégré)
@@ -191,7 +191,7 @@ GET {{baseUrlData}}/unusual-whales/dark-pool/NVDA?limit=30
 Authorization: Bearer {{accessToken}}
 
 ### Insider Buy/Sells - Transactions d'insiders
-GET {{baseUrlData}}/unusual-whales/stock/AAPL/insider-buy-sells
+GET {{baseUrlData}}/unusual-whales/stock/SPXW/insider-buy-sells
 Authorization: Bearer {{accessToken}}
 
 ### Institution Activity - Activité institutionnelle
