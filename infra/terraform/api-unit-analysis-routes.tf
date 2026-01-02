@@ -51,6 +51,16 @@ resource "aws_apigatewayv2_route" "post_analyze_convergence_risk" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# POST /analyze/earnings-hub?ticker=CCL
+# Analyser le Earnings Hub (score, historique, insights)
+resource "aws_apigatewayv2_route" "post_analyze_earnings_hub" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /analyze/earnings-hub"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 # ============================================
 # Routes de récupération des résultats
 # ============================================
