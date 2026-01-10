@@ -997,9 +997,11 @@ export class UnusualWhalesService {
   async getEconomicCalendar(params?: EconomicCalendarQueryParams): Promise<ApiResponse<EconomicCalendarResponse['data']>> {
     return handleError(async () => {
       const cacheKey = `uw_economic_calendar_${JSON.stringify(params)}`;
-      const cached = await this.cache.get<EconomicCalendarResponse['data']>(cacheKey, 'cache_key');
+      const cached = await this.cache.get<any>(cacheKey, 'cache_key');
       if (cached) {
-        return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
+        // Le cache retourne un objet avec une propriété 'data' qui contient le tableau
+        const data = Array.isArray(cached.data) ? cached.data : (Array.isArray(cached) ? cached : []);
+        return { success: true, data, cached: true, count: data.length, timestamp: new Date().toISOString() };
       }
       const response = await this.repository.getEconomicCalendar(params);
       await this.cache.set(cacheKey, response.data as any, 'cache_key', 24); // Cache for 24 hours
@@ -1017,9 +1019,11 @@ export class UnusualWhalesService {
   async getFDACalendar(params?: FDACalendarQueryParams): Promise<ApiResponse<FDACalendarResponse['data']>> {
     return handleError(async () => {
       const cacheKey = `uw_fda_calendar_${JSON.stringify(params)}`;
-      const cached = await this.cache.get<FDACalendarResponse['data']>(cacheKey, 'cache_key');
+      const cached = await this.cache.get<any>(cacheKey, 'cache_key');
       if (cached) {
-        return { success: true, data: cached, cached: true, count: cached.length, timestamp: new Date().toISOString() };
+        // Le cache retourne un objet avec une propriété 'data' qui contient le tableau
+        const data = Array.isArray(cached.data) ? cached.data : (Array.isArray(cached) ? cached : []);
+        return { success: true, data, cached: true, count: data.length, timestamp: new Date().toISOString() };
       }
       const response = await this.repository.getFDACalendar(params);
       await this.cache.set(cacheKey, response.data as any, 'cache_key', 24); // Cache for 24 hours

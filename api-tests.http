@@ -3,27 +3,34 @@
 ### 
 ### Variables d'environnement (à définir dans VS Code settings ou dans ce fichier)
 ### 
-### IMPORTANT : Après le déploiement de la séparation des API Gateways, il y a maintenant 2 URLs :
+### IMPORTANT : Après le déploiement de la séparation des API Gateways, il y a maintenant 3 URLs :
 ### - @baseUrlMain : API Gateway 1 (routes de l'application principale)
 ### - @baseUrlData : API Gateway 2 (routes de données brutes FMP + UW)
+### - @baseUrlFunds : API Gateway 3 (routes Funds - isolation de charge)
 ### 
 ### Pour obtenir les URLs après terraform apply :
 ###   terraform output api_gateway_url        # API Gateway 1
 ###   terraform output api_data_gateway_url  # API Gateway 2
+###   terraform output api_funds_gateway_url # API Gateway 3
 
-### API Gateway 1 : Application Principale (signals, funds, companies, analysis, scoring, etc.)
+### API Gateway 1 : Application Principale (signals, companies, analysis, scoring, etc.)
 @baseUrlMain = https://tsdd1sibd1.execute-api.eu-west-3.amazonaws.com/prod
 
 ### API Gateway 2 : Données Brutes (FMP + Unusual Whales)
 ### ⚠️ À mettre à jour après terraform apply avec : terraform output api_data_gateway_url
 @baseUrlData = https://faq9dl95v7.execute-api.eu-west-3.amazonaws.com/prod
 
+### API Gateway 3 : Routes Funds (isolation de charge)
+### ⚠️ À mettre à jour après terraform apply avec : terraform output api_funds_gateway_url
+@baseUrlFunds = https://8w9dcy8pe0.execute-api.eu-west-3.amazonaws.com/prod
+
 ### Token d'accès (à mettre à jour régulièrement)
-@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImYyZGI1YjE5LTI5NWMtNDlhMy04MWI1LWRkNTM2NGU3ZWY3YiIsImV2ZW50X2lkIjoiMTc5ZTQ4OTgtZThlOS00NzAxLWJmMWMtZmJkYzk5NTIwMDAxIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzI3NzYxMywiZXhwIjoxNzY3MjgxMjEzLCJpYXQiOjE3NjcyNzc2MTMsImp0aSI6Ijc2ZGZmN2NmLTU1YjYtNDQzMy1hZDg3LTdjMjg3Y2JmZmQ2NSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.M_A57qHF6epdlXbM_O5ZMwFNzG5170L0x6x65eLHI7KLPGCD7HkwOJnb_W5Ug4cNr3lJ5A-_fs3kEA-2lFc2OqC8iD7AA3XTYwASvr7dPLq4umZXoLc89AfO56BAk1QkPd0BPhgGulpBPBYVFcyj9jAcTlCLFx8mth3vgdPtrITc4Ntzu19XgkeXbQZnbvCXMhVe4AFjEtBefF-s10zxcWEuFrICzL3gcGxEol_Ef-rKmBdxivj6WCLvjHAvtVQd5uMqZz3lK_FD1wW7SamHSu98qNRzk3NA5a0owyrGnI51Bs8LVH9s-RTYfHK3eFUCmBnHTNiYBg_SBMeOlAkUlw
+@accessToken = eyJraWQiOiIwekpSMTVhYjBqSk0xdnJmaFBSa0NveGJBaHhnXC9HblhkeU56Y09iRkRyND0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1MTI5ODBiZS0wMGQxLTcwZmYtNTQ3Zi0zYTA3YzkyMzA3ODIiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtd2VzdC0zLmFtYXpvbmF3cy5jb21cL2V1LXdlc3QtM19GUURtaHhWMTQiLCJjbGllbnRfaWQiOiJwa3A0aTgyam50dHRoajJjYmlsdHVkZ3ZhIiwib3JpZ2luX2p0aSI6ImUxYTEyNWU5LTE4ODQtNDE1Mi05YzRlLWM1YzUyZDYxN2ZlZiIsImV2ZW50X2lkIjoiZjE2ZmU0MTEtNWRmMS00OWM1LTg2OGMtZDkyN2UzODZhNGUzIiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiIsImF1dGhfdGltZSI6MTc2NzkxNDMwOSwiZXhwIjoxNzY3OTE3OTA5LCJpYXQiOjE3Njc5MTQzMDksImp0aSI6ImRmODYzYzBlLTEyZWMtNDU0Yi1hMmNiLWIwYTJlMTg3ZDc5ZSIsInVzZXJuYW1lIjoiNTEyOTgwYmUtMDBkMS03MGZmLTU0N2YtM2EwN2M5MjMwNzgyIn0.gwyjgJ_SL7J-Zue-Uy1jM-TweVKTOjpCIFwkLg8hR4JRCLP7CfyUONetyXBKkgsifF5EIXdeS17o7AI3ZFzFlRuwqPuWjalVeB5r4GejeuD4w36AzPvAZZpjyf9x5gA79Ou5n8Vshb1jWIA7I8cIRYzUN0KAi2qDEstykbkSSKmKJ1D4pcYYm3fgQT_wT_2ImKZ7hN6M7rL162cJeVlqP0VxNXkoemNwpVX4oHvUKJdgfJY9AOP3GscGBMAGEaiD75AOtGS0P16j35q4I4bXTmtNQFhG71jBahL8CTOeHIh0UZDWuED65oELpbBWgoaLgAI_SqvCR67IFQPvL65fOA
 /fmp/insider-trading/latest@watchId = ff9dcbd4-1e0a-4e48-8604-854cdb5ac407"
 ### ============================================
 ### ANALYSE COMBINÉE (FMP + UW)
-### ============================================
+### =====/unusual-whales/market/economic-calendar?limit=500
+=======================================
 
 ### Complete Analysis - Analyse complète (fundamentals + sentiment)
 ### ✅ API Gateway 1 (Application Principale)
@@ -203,49 +210,10 @@ Authorization: Bearer {{accessToken}}
 ### ============================================
 ### ⚠️ API Gateway 2 (Données Brutes) - Mettre à jour @baseUrlData après terraform apply
 
-### Stock Quote - Cotation
-GET {{baseUrlData}}/fmp/quote/AAPL
-Authorization: Bearer {{accessToken}}
 
-### Income Statement - État des résultats
-GET {{baseUrlData}}/fmp/income-statement/AAPL?limit=5&period=annual
-Authorization: Bearer {{accessToken}}
 
-### Financial Ratios - Ratios financiers
-GET {{baseUrlData}}/fmp/financial-ratios/AAPL?limit=5
-Authorization: Bearer {{accessToken}}
-
-### Key Metrics - Métriques clés
-GET {{baseUrlData}}/fmp/key-metrics/AAPL?limit=5
-Authorization: Bearer {{accessToken}}
-
-### Balance Sheet - Bilan
-GET {{baseUrlData}}/fmp/balance-sheet-statement/AAPL?limit=1
-Authorization: Bearer {{accessToken}}
-
-### Cash Flow Statement - État des flux de trésorerie
-GET {{baseUrlData}}/fmp/cash-flow-statement/AAPL?limit=1
-Authorization: Bearer {{accessToken}}
-
-### DCF Valuation - Valorisation DCF
-GET {{baseUrlData}}/fmp/dcf-valuation/AAPL
-Authorization: Bearer {{accessToken}}
 
 ### Levered DCF - DCF avec effet de levier
-GET {{baseUrlData}}/fmp/levered-dcf/AAPL
-Authorization: Bearer {{accessToken}}
-
-### Earnings Report - Rapport de résultats
-GET {{baseUrlData}}/fmp/earnings/AAPL
-Authorization: Bearer {{accessToken}}
-
-### Financial Estimates - Estimations financières
-GET {{baseUrlData}}/fmp/financial-estimates/AAPL?period=quarter
-Authorization: Bearer {{accessToken}}
-
-### Ratings Snapshot - Aperçu des notations
-GET {{baseUrlData}}/fmp/ratings-snapshot/AAPL
-Authorization: Bearer {{accessToken}}
 
 ### ============================================
 ### TICKER ACTIVITY (Legacy)
@@ -877,6 +845,48 @@ Authorization: Bearer {{accessToken}}
 GET {{baseUrlData}}/unusual-whales/market/economic-calendar?limit=500
 Authorization: Bearer {{accessToken}}
 
+### Economic Calendar - Avec date spécifique (aujourd'hui)
+GET {{baseUrlData}}/unusual-whales/market/economic-calendar?date=2026-01-02&limit=500
+Authorization: Bearer {{accessToken}}
+
+### Economic Calendar - Avec date future (demain)
+GET {{baseUrlData}}/unusual-whales/market/economic-calendar?date=2026-01-03&limit=500
+Authorization: Bearer {{accessToken}}
+
+### Economic Calendar - Avec date passée (hier)
+GET {{baseUrlData}}/unusual-whales/market/economic-calendar?date=2026-01-01&limit=500
+Authorization: Bearer {{accessToken}}
+
+### Economic Calendar - Test plage de dates (5 jours)
+GET {{baseUrlData}}/unusual-whales/market/economic-calendar?date=2026-01-05&limit=500
+Authorization: Bearer {{accessToken}}
+
+### fda calendar
+GET {{baseUrlData}}/unusual-whales/market/fda-calendar?limit=500
+Authorization: Bearer {{accessToken}}
+
+### FDA Calendar - Avec date spécifique (aujourd'hui)
+GET {{baseUrlData}}/unusual-whales/market/fda-calendar?target_date_min=2026-01-01&limit=50
+Authorization: Bearer {{accessToken}}
+
+### FDA Calendar - Avec date future
+GET {{baseUrlData}}/unusual-whales/market/fda-calendar?date=2026-01-10&limit=500
+Authorization: Bearer {{accessToken}}
+
+### FDA Calendar - Avec date passée
+GET {{baseUrlData}}/unusual-whales/market/fda-calendar?date=2025-12-20&limit=500
+Authorization: Bearer {{accessToken}}
+
+### /earnings/premarket
+GET {{baseUrlData}}/unusual-whales/earnings?ticker=NVDA
+Authorization: Bearer {{accessToken}}
+
+### /earnings/afterhours
+GET {{baseUrlData}}/unusual-whales/earnings/afterhours?date=2026-01-29&limit=500
+Authorization: Bearer {{accessToken}}
+#### earnigs /premarket
+GET {{baseUrlData}}/unusual-whales/earnings/premarket?date=2026-02-25&limit=500
+Authorization: Bearer {{accessToken}}
 ### Analyse IA du calendrier économique Unusual Whales
 POST {{baseUrlMain}}/ai/economic-calendar-analysis?limit=500
 Authorization: Bearer {{accessToken}}
@@ -1171,7 +1181,7 @@ POST {{baseUrlMain}}/ingest/price-context?ticker=NVDA
 Authorization: Bearer {{accessToken}}
 
 ### Test Ingestion 6b: Ingérer earnings historiques pour NVDA
-POST {{baseUrlMain}}/ingest/earnings?ticker=NVDA
+POST {{baseUrlMain}}/earnings-history?ticker=NVDA
 Authorization: Bearer {{accessToken}}
 
 ### Test INgestion greek
@@ -1193,7 +1203,7 @@ Authorization: Bearer {{accessToken}}
 ### ============================================
 
 ### Analyse Convergence Risk - Basique (NVDA)
-POST {{baseUrlMain}}/analyze/convergence-risk?ticker=NVDA
+POST {{baseUrlMain}}/analyze/convergence-risk?ticker=TSLA
 Authorization: Bearer {{accessToken}}
 
 ### Analyse Convergence Risk - Avec paramètres personnalisés
@@ -1207,12 +1217,66 @@ Content-Type: application/json
 
 {
   "darkPoolLimit": 150,
-  "optionsLimit": 300,
-  "minPremium": 100000,
-  "expiryFilter": "tomorrow",
-  "liquidationThreshold": 0.01
 }
 
+### ============================================
+### EARNINGS HUB
+### ============================================
+
+### Analyse Earnings Hub - Basique (CCL)
+POST {{baseUrlMain}}/analyze/earnings-hub?ticker=CCL
+Authorization: Bearer {{accessToken}}
+
+### Analyse Earnings Hub - Avec paramètres personnalisés
+POST {{baseUrlMain}}/analyze/earnings-hub?ticker=AAPL&quartersLimit=20
+Authorization: Bearer {{accessToken}}
+
+### Analyse Earnings Hub - Avec body JSON
+POST {{baseUrlMain}}/analyze/earnings-hub?ticker=MSFT
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "quartersLimit": 16
+}
+
+### ============================================
+### CATALYST CALENDAR
+### ============================================
+
+### Calendrier Catalyst - Basique (30 jours)
+POST {{baseUrlMain}}/analyze/catalyst-calendar
+Authorization: Bearer {{accessToken}}
+
+^
+### Calendrier Catalyst - Avec dates et watchlist
+POST {{baseUrlMain}}/analyze/catalyst-calendar?startDate=2025-12-29&endDate=2026-01-02&watchlist=NVDA%2CAAPL%2CTSLA%2CMSFT%2CAMD
+Authorization: Bearer {{accessToken}}
+### Calendrier Catalyst - Avec dates et watchlist
+POST {{baseUrlMain}}/analyze/catalyst-calendar?startDate=2026-01-01&endDate=2026-02-28&watchlist=NVDA,AAPL,TSLA&debug=true
+Authorization: Bearer {{accessToken}}
+### test catalyst
+POST {{baseUrlMain}}/analyze/catalyst-calendar?startDate=2026-01-01&endDate=2026-01-31&watchlist=NVDA,AAPL,TSLA
+Authorization: Bearer {{accessToken}}
+
+### Prochains earnings pour NVDA
+GET {{baseUrlMain}}/earnings/upcoming/TSLA?daysAhead=90&limit=5
+Authorization: Bearer {{accessToken}}
+### Calendrier Catalyst - Avec body JSON
+POST {{baseUrlMain}}/analyze/catalyst-calendar
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "startDate": "2026-01-01",
+  "endDate": "2026-03-28",
+  "watchlist": ["NVDA", "AAPL", "TSLA", "MSFT"],
+  "limit": 100
+}
+
+#### api/news/headlines
+GET {{baseUrlData}}/unusual-whales/news/headlines?limit=100
+Authorization: Bearer {{accessToken}}
 ### Analyse Convergence Risk - Filtre expiration "next_week"
 POST {{baseUrlMain}}/analyze/convergence-risk?ticker=AAPL&expiryFilter=next_week
 Authorization: Bearer {{accessToken}}
@@ -1582,3 +1646,471 @@ Authorization: Bearer {{accessToken}}
 
 ###
 
+####/greek-flow
+
+GET {{baseUrlData}}/greek-flow/TSLA
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### 🏦 FUNDS SYSTEM - Workflow Complet
+### ============================================
+### ✅ API Gateway 1 (Application Principale)
+### Tests pour valider le système complet de suivi des funds institutionnels
+###
+### Workflow complet :
+### 1. Créer un fund
+### 2. Ajouter des CIK supplémentaires (multi-CIK)
+### 3. Vérifier les filings découverts
+### 4. Récupérer le portefeuille (dédupliqué)
+### 5. Calculer les différences
+### 6. Vérifier les changements récents
+### 7. Tester le Transparency Mode
+### 8. Configurer les notifications
+### 9. Récupérer les notifications
+### 10. Tester le calendrier SEC
+
+### ============================================
+### ÉTAPE 1 : CRÉER UN FUND
+### ============================================
+
+### Créer un fund (BlackRock)
+POST {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "BlackRock Inc.",
+  "cik": "0001364742",
+  "tier_influence": 5,
+  "category": "asset_manager"
+}
+
+### Créer un fund (Vanguard)
+POST {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Vanguard Group Inc",
+  "cik": "0000102909",
+  "tier_influence": 5,
+  "category": "asset_manager"
+}
+
+### Créer un fund (Berkshire Hathaway)
+POST {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Berkshire Hathaway Inc",
+  "cik": "0001697748",
+  "tier_influence": 5,
+  "category": "hedge_fund"
+}
+
+### ============================================
+### ÉTAPE 2 : LISTER TOUS LES FUNDS
+### ============================================
+
+### Liste tous les funds
+GET {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+
+### Détails d'un fund (remplacer {id} par un ID réel)
+GET {{baseUrlFunds}}/funds/25
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 3 : GESTION MULTI-CIK
+### ============================================
+
+### Ajouter un CIK supplémentaire à BlackRock
+### BlackRock a plusieurs entités légales :
+### - CIK Primary: 0001364742 (BlackRock Inc.)
+### - CIK Secondaire: 0002012383 (BlackRock Advisors LLC)
+POST {{baseUrlFunds}}/funds/1/ciks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "cik": "0002012383",
+  "entity_name": "BlackRock Advisors LLC",
+  "is_primary": false
+}
+
+### Liste tous les CIK d'un fund
+GET {{baseUrlFunds}}/funds/25/ciks
+Authorization: Bearer {{accessToken}}
+
+### Transparency Mode - Affiche tous les CIK avec statistiques
+GET {{baseUrlFunds}}/funds/1/transparency
+Authorization: Bearer {{accessToken}}
+
+### Supprimer un CIK (remplacer {cik} par un CIK réel)
+### DELETE {{baseUrlFunds}}/funds/1/ciks/0002012383
+### Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 4 : FILINGS
+### ============================================
+
+### Liste tous les filings d'un fund
+GET {{baseUrlFunds}}/funds/1/filings
+Authorization: Bearer {{accessToken}}
+
+### Filings filtrés par type (13F-HR uniquement)
+GET {{baseUrlFunds}}/funds/1/filings?form_type=13F-HR
+Authorization: Bearer {{accessToken}}
+
+### Filings filtrés par type (SC 13G uniquement)
+GET {{baseUrlFunds}}/funds/1/filings?form_type=SC%2013G
+Authorization: Bearer {{accessToken}}
+
+### Détails d'un filing spécifique
+GET {{baseUrlFunds}}/funds/32/filings/1
+Authorization: Bearer {{accessToken}}
+
+### Holdings d'un filing parsé (lire les données parsées)
+GET {{baseUrlFunds}}/funds/32/filings/1/holdings
+Authorization: Bearer {{accessToken}}
+
+### Holdings d'un filing parsé avec limite
+GET {{baseUrlFunds}}/funds/32/filings/1/holdings?limit=50
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 5 : PORTEFEUILLE (DÉDUPLIQUÉ)
+### ============================================
+
+### Portefeuille dédupliqué (recommandé - évite double comptage)
+GET {{baseUrlFunds}}/funds/25/portfolio
+Authorization: Bearer {{accessToken}}
+
+### Portefeuille dédupliqué avec paramètre explicite
+GET {{baseUrlFunds}}/funds/1/portfolio?deduplicate=true
+Authorization: Bearer {{accessToken}}
+
+### Portefeuille simple (sans déduplication - pour compatibilité)
+GET {{baseUrlFunds}}/funds/1/portfolio?deduplicate=false
+Authorization: Bearer {{accessToken}}
+
+### Holdings simples (limite par défaut: 100)
+GET {{baseUrlFunds}}/funds/1/holdings
+Authorization: Bearer {{accessToken}}
+
+### Holdings avec limite personnalisée
+GET {{baseUrlFunds}}/funds/1/holdings?limit=50
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 6 : DIFFÉRENCES ENTRE FILINGS
+### ============================================
+
+### Liste toutes les différences (limite par défaut: 50)
+GET {{baseUrlFunds}}/funds/1/diffs
+Authorization: Bearer {{accessToken}}
+
+### Différences avec limite personnalisée
+GET {{baseUrlFunds}}/funds/1/diffs?limit=100
+Authorization: Bearer {{accessToken}}
+
+### Différences filtrées par ticker
+GET {{baseUrlFunds}}/funds/1/diffs?ticker=AAPL
+Authorization: Bearer {{accessToken}}
+
+### Historique des changements pour un ticker spécifique
+GET {{baseUrlFunds}}/funds/1/diffs/AAPL
+Authorization: Bearer {{accessToken}}
+
+#### ETAPE SURVEILLES LES DIFFS 
+# Comparer deux dates spécifiques
+GET {{baseUrlFunds}}/funds/1/diffs?from_date=2025-08-14&to_date=2025-11-03
+Authorization: Bearer {{accessToken}}
+#### Comparer deux trimestres
+GET {{baseUrlFunds}}/funds/1/diffs?quarter=Q4-2024
+Authorization: Bearer {{accessToken}}
+#### Comparer deux années
+GET {{baseUrlFunds}}/funds/1/diffs?year=2024
+Authorization: Bearer {{accessToken}}
+#### Par défaut (sans params) : retourne les diffs calculés en base
+GET {{baseUrlFunds}}/funds/1/diffs
+Authorization: Bearer {{accessToken}}
+### ============================================
+### ÉTAPE 7 : CHANGEMENTS RÉCENTS
+### ============================================
+
+### Changements récents (min_change_pct par défaut: 10%)
+GET {{baseUrlFunds}}/funds/1/changes
+Authorization: Bearer {{accessToken}}
+
+### Changements récents avec seuil personnalisé (5%)
+GET {{baseUrlFunds}}/funds/1/changes?min_change_pct=5
+Authorization: Bearer {{accessToken}}
+
+### Changements récents avec seuil élevé (20%)
+GET {{baseUrlFunds}}/funds/1/changes?min_change_pct=20
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 8 : CALCUL MANUEL DES DIFFÉRENCES
+### ============================================
+
+### Calculer les différences pour un filing spécifique
+### (remplacer {filingId} par un ID de filing réel)
+### POST {{baseUrlFunds}}/funds/1/filings/123/calculate-diff
+### Authorization: Bearer {{accessToken}}
+### Content-Type: application/json
+###
+### {
+###   "compare_with_previous": true
+### }
+
+### ============================================
+### ÉTAPE 9 : NOTIFICATIONS
+### ============================================
+
+### Récupérer les préférences de notification
+GET {{baseUrlFunds}}/funds/1/notifications/preferences
+Authorization: Bearer {{accessToken}}
+
+### Mettre à jour les préférences de notification
+PUT {{baseUrlFunds}}/funds/1/notifications/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "min_change_pct": 10.0,
+  "notify_on_exit": true,
+  "notify_on_new": true,
+  "notify_on_increase": true,
+  "notify_on_decrease": false,
+  "digest_enabled": true,
+  "digest_time": "09:00:00",
+  "email_enabled": false,
+  "push_enabled": false
+}
+
+### Récupérer les notifications en attente
+GET {{baseUrlFunds}}/notifications/funds
+Authorization: Bearer {{accessToken}}
+
+### Créer un daily digest manuellement
+POST {{baseUrlFunds}}/notifications/digest
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "digest_time": "09:00:00"
+}
+
+### Liste tous les digests
+GET {{baseUrlFunds}}/notifications/digests
+Authorization: Bearer {{accessToken}}
+
+### Détails d'un digest spécifique (remplacer {digestId} par un ID réel)
+### GET {{baseUrlFunds}}/notifications/digests/123
+### Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ÉTAPE 10 : CALENDRIER SEC
+### ============================================
+
+### Informations sur le calendrier SEC
+GET {{baseUrlFunds}}/sec/calendar
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### TESTS DE VALIDATION DU WORKFLOW
+### ============================================
+
+### Test 1: Vérifier qu'un fund peut être créé
+POST {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "Test Fund",
+  "cik": "0001234567",
+  "tier_influence": 3,
+  "category": "hedge_fund"
+}
+
+### Test 2: Vérifier que les CIK multiples fonctionnent
+### (Créer un fund, ajouter un CIK secondaire, vérifier transparency)
+GET {{baseUrlFunds}}/funds/1/transparency
+Authorization: Bearer {{accessToken}}
+
+### Test 3: Vérifier que le portefeuille dédupliqué fonctionne
+GET {{baseUrlFunds}}/funds/1/portfolio
+Authorization: Bearer {{accessToken}}
+
+### Test 4: Vérifier que les différences sont calculées
+GET {{baseUrlFunds}}/funds/1/diffs?limit=10
+Authorization: Bearer {{accessToken}}
+
+### Test 5: Vérifier que les changements récents sont détectés
+GET {{baseUrlFunds}}/funds/1/changes?min_change_pct=5
+Authorization: Bearer {{accessToken}}
+
+### Test 6: Vérifier que les notifications peuvent être configurées
+PUT {{baseUrlFunds}}/funds/1/notifications/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "min_change_pct": 5.0,
+  "notify_on_exit": true,
+  "digest_enabled": true
+}
+
+### Test 7: Vérifier que le calendrier SEC fonctionne
+GET {{baseUrlFunds}}/sec/calendar
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### WORKFLOW COMPLET - EXEMPLE BLACKROCK
+### ============================================
+
+### 1. Créer BlackRock (si pas déjà créé)
+POST {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "name": "BlackRock Inc.",
+  "cik": "0001364742",
+  "tier_influence": 5,
+  "category": "asset_manager"
+}
+
+### 2. Ajouter CIK secondaire (BlackRock Advisors LLC)
+POST {{baseUrlFunds}}/funds/1/ciks
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "cik": "0002012383",
+  "entity_name": "BlackRock Advisors LLC",
+  "is_primary": false
+}
+
+### 2. Vérifier Transparency Mode
+GET {{baseUrlFunds}}/funds
+Authorization: Bearer {{accessToken}}
+
+### 3. Vérifier Transparency Mode
+
+GET {{baseUrlFunds}}/funds/3/transparency
+Authorization: Bearer {{accessToken}}
+
+### 4. Vérifier les filings (tous CIK confondus)
+GET {{baseUrlFunds}}/funds/16/filings
+Authorization: Bearer {{accessToken}}
+
+### 5. Récupérer le portefeuille dédupliqué
+GET {{baseUrlFunds}}/funds/1/portfolio
+Authorization: Bearer {{accessToken}}
+
+### 6. Vérifier les différences
+GET {{baseUrlFunds}}/funds/1/diffs?limit=20
+Authorization: Bearer {{accessToken}}
+
+### 7. Vérifier les changements récents
+GET {{baseUrlFunds}}/funds/1/changes?min_change_pct=10&days=30
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### ANALYSE GLOBALE : TOUS LES CHANGEMENTS
+### ============================================
+
+### Analyse globale - Tous les changements de tous les funds
+### Détecte automatiquement les changements significatifs sans spécifier d'ID de fund
+GET {{baseUrlFunds}}/funds/changes
+Authorization: Bearer {{accessToken}}
+
+### Analyse globale avec seuil personnalisé (min_change_pct)
+GET {{baseUrlFunds}}/funds/changes?min_change_pct=10&days=30
+Authorization: Bearer {{accessToken}}
+
+### Analyse globale avec limite de résultats
+GET {{baseUrlFunds}}/funds/changes
+Authorization: Bearer {{accessToken}}
+
+### Analyse globale - 30 derniers jours (pour tester avec des données historiques)
+GET {{baseUrlFunds}}/funds/changes?min_change_pct=5&limit=200&days=30
+Authorization: Bearer {{accessToken}}
+
+### Analyse globale - 90 derniers jours (pour voir plus de données)
+GET {{baseUrlFunds}}/funds/changes?min_change_pct=5&limit=500&days=90
+Authorization: Bearer {{accessToken}}
+
+### Analyse globale - Sans filtre de date (toutes les données, seuil bas)
+GET {{baseUrlFunds}}/funds/changes?min_change_pct=0&limit=500
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### DIAGNOSTIC : Vérifier pourquoi pas de données
+### ============================================
+
+### 1. Vérifier les funds disponibles
+GET {{baseUrlFunds}}/funds/1
+Authorization: Bearer {{accessToken}}
+
+### 2. Vérifier les filings parsés pour un fund (ex: fund_id=1)
+GET {{baseUrlFunds}}/funds/1/filings?form_type=13F-HR
+Authorization: Bearer {{accessToken}}
+
+### 3. Vérifier les diffs existants pour un fund
+GET {{baseUrlFunds}}/funds/1/diffs?limit=10
+Authorization: Bearer {{accessToken}}
+
+### 4. Calculer les diffs pour un filing (remplacer {filingId} par un ID réel)
+### ⚠️ IMPORTANT : Récupère d'abord les filings avec la requête ci-dessus
+### Puis utilise le filing_id le plus récent pour calculer les diffs
+POST {{baseUrlFunds}}/funds/1/filings/123/calculate-diff
+Authorization: Bearer {{accessToken}}
+
+### 5. Après avoir calculé les diffs, réessayer l'analyse globale
+GET {{baseUrlFunds}}/funds/changes?min_change_pct=0&limit=500
+Authorization: Bearer {{accessToken}}
+
+### ============================================
+### SCRIPT AUTOMATIQUE : Calculer tous les diffs
+### ============================================
+### Exécuter le script pour calculer automatiquement tous les diffs :
+### 
+### Option 1 : Avec shell script
+###   ./scripts/calculate-all-diffs.sh
+###
+### Option 2 : Avec Node.js directement
+###   node scripts/calculate-all-diffs.js
+###
+### Option 3 : Avec TypeScript (si tsx installé)
+###   npx tsx scripts/calculate-all-diffs.ts
+###
+### Variables d'environnement requises :
+###   - SUPABASE_SERVICE_KEY ou SUPABASE_ANON_KEY
+###   - BASE_URL (optionnel, défaut: API Gateway 2)
+###   - ACCESS_TOKEN (optionnel, pour utiliser l'API)
+
+### 8. Configurer les notifications
+PUT {{baseUrlFunds}}/funds/1/notifications/preferences
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "min_change_pct": 10.0,
+  "notify_on_exit": true,
+  "notify_on_new": true,
+  "digest_enabled": true,
+  "digest_time": "09:00:00"
+}
+
+### 9. Récupérer les notifications
+GET {{baseUrlFunds}}/notifications/funds
+Authorization: Bearer {{accessToken}}
+
+### 10. Vérifier le calendrier SEC
+GET {{baseUrlFunds}}/sec/calendar
+Authorization: Bearer {{accessToken}}

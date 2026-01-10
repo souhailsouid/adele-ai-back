@@ -121,14 +121,23 @@ export interface FDACalendarResponse {
 
 /**
  * Paramètres de requête pour GET /market/fda-calendar
+ * Documentation: https://api.unusualwhales.com/api/market/fda-calendar
  */
 export interface FDACalendarQueryParams {
-  /** Date de trading au format YYYY-MM-DD (optionnel, défaut: dernière date de trading) */
-  date?: string; // ISO date: "2024-01-18"
-  /** Nombre d'éléments à retourner (1-500, défaut: 500) */
-  limit?: number; // Min: 1, Max: 500, Default: 500
-  /** Numéro de page (utiliser avec limit). Commence à la page 0 */
-  page?: number; // Ex: 1
+  /** Minimum target date (supports Q1-Q4, H1-H2, MID, LATE formats or YYYY-MM-DD) */
+  target_date_min?: string; // Ex: "2024-Q1" or "2024-01-18"
+  /** Maximum target date (supports Q1-Q4, H1-H2, MID, LATE formats or YYYY-MM-DD) */
+  target_date_max?: string; // Ex: "2024-Q2" or "2024-06-30"
+  /** Minimum announced date (YYYY-MM-DD) */
+  announced_date_min?: string; // ISO date: "2024-01-18"
+  /** Maximum announced date (YYYY-MM-DD) */
+  announced_date_max?: string; // ISO date: "2024-12-31"
+  /** Filter by ticker symbol (comma-separated) */
+  ticker?: string; // Ex: "AAPL,INTC"
+  /** Filter by drug name (partial match) */
+  drug?: string; // Ex: "Keytruda"
+  /** Nombre d'éléments à retourner (1-200, défaut: 100) */
+  limit?: number; // Min: 1, Max: 200, Default: 100
 }
 
 // ========== Insider Buy & Sells ==========

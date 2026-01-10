@@ -19,15 +19,26 @@ output "api_gateway_id" {
   description = "ID de l'API Gateway principale"
 }
 
-# API Gateway 2 : Données brutes (FMP + UW)
+# API Gateway 2 : Données brutes (FMP + UW + Funds)
 output "api_data_gateway_url" {
   value       = aws_apigatewayv2_stage.prod_data.invoke_url
-  description = "URL de l'API Gateway pour les données brutes (FMP + UW)"
+  description = "URL de l'API Gateway pour les données brutes (FMP + UW + Funds)"
 }
 output "api_data_gateway_id" {
   value       = aws_apigatewayv2_api.http_data.id
-  description = "ID de l'API Gateway pour les données brutes"
+  description = "ID de l'API Gateway pour les données brutes (FMP + UW + Funds)"
 }
+
+# API Gateway 3 : Routes Funds - SUPPRIMÉ
+# Les routes Funds sont maintenant sur l'API Gateway 2 (http_data)
+# output "api_funds_gateway_url" {
+#   value       = aws_apigatewayv2_stage.prod_funds.invoke_url
+#   description = "URL de l'API Gateway 3 pour les routes Funds (isolation de charge)"
+# }
+# output "api_funds_gateway_id" {
+#   value       = aws_apigatewayv2_api.http_funds.id
+#   description = "ID de l'API Gateway 3 pour les routes Funds"
+# }
 output "region" {
   value       = var.region
   description = "Région AWS utilisée"

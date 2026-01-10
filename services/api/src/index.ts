@@ -5,6 +5,7 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Authorization,Content-Type,Accept",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  "Content-Type": "application/json",
 };
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
@@ -41,7 +42,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     if (!jwtClaims) {
       console.log("No JWT claims, returning 401");
-      return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: "unauthorized" }) };
+      return { 
+        statusCode: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+        body: JSON.stringify({ error: "unauthorized" }) 
+      };
     }
 
     // jwtClaims contient: sub (userId), email, etc.
@@ -66,7 +71,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       console.log("[HANDLER] Result keys:", result ? Object.keys(result) : "null");
       return {
         statusCode: 200,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         body: JSON.stringify(result),
       };
     } catch (routeError: any) {
@@ -92,7 +97,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
     return {
       statusCode,
-      headers: corsHeaders,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       body: JSON.stringify({
         error: e.message || "Internal server error",
         details: e?.issues || (process.env.NODE_ENV === "development" ? e?.stack : undefined),

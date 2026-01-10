@@ -29,7 +29,60 @@ GET  /funds
 GET  /funds/{id}
 GET  /funds/{id}/holdings
 GET  /funds/{id}/filings
+GET  /funds/{id}/filings/{filingId}
+GET  /funds/{id}/filings/{filingId}/holdings
+GET  /funds/{id}/portfolio
+GET  /funds/{id}/diffs
+GET  /funds/{id}/diffs/{ticker}
+GET  /funds/{id}/changes
+POST /funds/{id}/filings/{filingId}/calculate-diff
+GET  /funds/{id}/ciks
+POST /funds/{id}/ciks
+DELETE /funds/{id}/ciks/{cik}
+GET  /funds/{id}/transparency
 ```
+
+**Nouvelles routes (remplacement APIs externes) :**
+- `GET /funds/{id}/portfolio` : Portefeuille actuel (dédupliqué par défaut)
+- `GET /funds/{id}/filings/{filingId}` : Détails d'un filing spécifique
+- `GET /funds/{id}/filings/{filingId}/holdings` : Holdings d'un filing parsé (lire les données parsées)
+- `GET /funds/{id}/diffs` : Différences entre filings
+- `GET /funds/{id}/diffs/{ticker}` : Historique d'un ticker
+- `GET /funds/{id}/changes` : Changements récents (>10% par défaut)
+- `POST /funds/{id}/filings/{filingId}/calculate-diff` : Calculer les différences
+- `GET /funds/{id}/transparency` : Transparency Mode (liste tous les CIK)
+
+### 📅 Catégorie : SEC Calendar
+```
+GET  /sec/calendar
+```
+
+**Utilité :** Calendrier des publications SEC (trimestres, périodes de pic, deadlines)
+
+### 🔔 Catégorie : Fund Notifications
+```
+GET  /funds/{id}/notifications/preferences
+PUT  /funds/{id}/notifications/preferences
+GET  /notifications/funds
+POST /notifications/digest
+GET  /notifications/digests
+GET  /notifications/digests/{digestId}
+```
+
+**Utilité :** Système de notifications intelligent pour les changements de funds
+- Filtrage du bruit (min_change_pct)
+- Priorisation automatique (Exit = Critical, New = High)
+- Daily digest pour regrouper les notifications
+
+### 🔍 Catégorie : Fund Transparency & Deduplication
+```
+GET  /funds/{id}/transparency
+```
+
+**Utilité :** Transparency Mode - Affiche tous les CIK agrégés pour un fund
+- Liste toutes les entités légales (CIK)
+- Statistiques par CIK (filings, dernier filing)
+- Évite le double comptage dans `/portfolio` (priorise CIK Primary)
 
 ### 🏢 Catégorie : Companies
 ```

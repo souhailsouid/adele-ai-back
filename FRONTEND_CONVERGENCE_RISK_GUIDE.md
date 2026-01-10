@@ -385,3 +385,293 @@ try {
 }
 ```
 
+---
+
+## 🎭 Modal en Grand (Timeline)
+
+### Exemple de Modal Complète (comme Earnings Hub)
+
+```typescript
+import { useState } from 'react';
+import { X } from 'lucide-react';
+
+interface ConvergenceRiskModalProps {
+  ticker: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function ConvergenceRiskModal({ ticker, isOpen, onClose }: ConvergenceRiskModalProps) {
+  const [analysis, setAnalysis] = useState<WhaleAnalysisResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !ticker) return;
+
+    setLoading(true);
+    setError(null);
+
+    analyzeConvergenceRisk(ticker)
+      .then(setAnalysis)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, [isOpen, ticker]);
+
+  if (!isOpen) return null;
+
+  const { analysis: data } = analysis || {};
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Convergence & Risque de Liquidation
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">{ticker}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Analyse en cours...</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">Erreur: {error.message}</p>
+            </div>
+          )}
+
+          {data && (
+            <div className="space-y-6">
+              {/* Métriques Principales */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Prix Actuel</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${data.analysis.currentPrice.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Support Dark Pool</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${data.analysis.whaleSupport.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Objectif d'Expiration</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${data.analysis.targetStrike.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Badge de Risque */}
+              <div className="flex items-center gap-4">
+                <LiquidationRiskBadge risk={data.analysis.liquidationRisk} />
+                {data.analysis.isWhaleInProfit && (
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                    ✅ Baleines en profit
+                  </span>
+                )}
+              </div>
+
+              {/* Distances */}
+              <div className="grid grid-cols-2 gap-4">
+                {data.analysis.priceDistanceFromSupport !== null && (
+                  <PriceDistanceIndicator
+                    distance={data.analysis.priceDistanceFromSupport}
+                    label="Distance au Support"
+                  />
+                )}
+                {data.analysis.priceDistanceFromTarget !== null && (
+                  <PriceDistanceIndicator
+                    distance={data.analysis.priceDistanceFromTarget}
+                    label="Distance à l'Objectif"
+                  />
+                )}
+              </div>
+
+              {/* Interprétation */}
+              {data.analysis.interpretation && (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2">Résumé</h3>
+                    <p className="text-gray-700">{data.analysis.interpretation.summary}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Points Clés</h3>
+                    <ul className="space-y-2">
+                      {data.analysis.interpretation.keyPoints.map((point, i) => (
+                        <li key={i} className="flex items-start gap-2 text-gray-700">
+                          <span className="text-blue-600 mt-1">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Scénarios */}
+                  {data.analysis.interpretation.scenarios.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Scénarios Possibles</h3>
+                      <div className="space-y-3">
+                        {data.analysis.interpretation.scenarios.map((scenario, i) => (
+                          <div
+                            key={i}
+                            className="border-l-4 border-blue-500 bg-blue-50 rounded-r-lg p-3"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-900">
+                                {scenario.label}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded text-xs ${
+                                  scenario.probability === 'high'
+                                    ? 'bg-red-100 text-red-800'
+                                    : scenario.probability === 'medium'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {scenario.probability === 'high'
+                                  ? 'Haute'
+                                  : scenario.probability === 'medium'
+                                  ? 'Moyenne'
+                                  : 'Basse'}{' '}
+                                probabilité
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700">{scenario.conditions}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommandation */}
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-indigo-900 mb-2">Recommandation</h3>
+                    <p className="text-indigo-800 capitalize">
+                      {data.analysis.interpretation.recommendation === 'caution'
+                        ? '⚠️ Prudence'
+                        : data.analysis.interpretation.recommendation === 'opportunity'
+                        ? '💡 Opportunité'
+                        : data.analysis.interpretation.recommendation === 'monitor'
+                        ? '👀 Surveiller'
+                        : '⚪ Neutre'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Utilisation dans la Timeline
+function TimelineEvent({ ticker }: { ticker: string }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Voir Analyse Convergence
+      </button>
+
+      <ConvergenceRiskModal
+        ticker={ticker}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
+  );
+}
+```
+
+### Styles CSS (Tailwind)
+
+```css
+/* Modal backdrop avec blur */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Animation d'entrée */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-enter {
+  animation: modalEnter 0.2s ease-out;
+}
+```
+
+### Variante avec Dialog (Shadcn/UI)
+
+```typescript
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+function ConvergenceRiskDialog({
+  ticker,
+  isOpen,
+  onClose,
+}: ConvergenceRiskModalProps) {
+  const { data, loading, error } = useConvergenceRisk({ ticker, enabled: isOpen });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Convergence & Risque de Liquidation - {ticker}
+          </DialogTitle>
+        </DialogHeader>
+
+        {loading && <div>Chargement...</div>}
+        {error && <div className="text-red-600">Erreur: {error.message}</div>}
+
+        {data?.analysis && (
+          <div className="space-y-6">
+            {/* Contenu identique à la modal ci-dessus */}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+

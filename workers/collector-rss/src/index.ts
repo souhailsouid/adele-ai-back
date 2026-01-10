@@ -1,9 +1,9 @@
 /**
  * Lambda pour collecter les flux RSS (Reuters, AP, Yahoo Finance)
- * Déclenché par EventBridge (cron: toutes les 15 minutes)
+ * Déclenché par SQS (via EventBridge cron: toutes les 15 minutes)
  */
 
-import { EventBridgeEvent } from "aws-lambda";
+import { SQSEvent } from "aws-lambda";
 import { supabase } from "./supabase";
 import { PutEventsCommand, EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import { extractStructuredData } from "./data-extractor";
@@ -218,9 +218,56 @@ const RSS_FEEDS = [
   // 🌍 RÉSEAUX SOCIAUX (Twitter/X + Truth Social)
   ...socialFeeds,
 ];
-export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) => {
-  console.log("RSS Collector triggered");
+export const handler = async (event: SQSEvent) => {
+  console.log("RSS Collector triggered via SQS");
+  console.log(`Received ${event.Records.length} message(s) from SQS`);
 
+  const errors: Array<{ messageId: string; error: any }> = [];
+
+  // Traiter chaque message SQS (normalement 1 message pour un cron)
+  for (const record of event.Records) {
+    try {
+      let messageBody: any = {};
+      if (record.body) {
+        try {
+          messageBody = JSON.parse(record.body);
+        } catch (e) {
+          console.log("SQS message body is not JSON (expected for cron), proceeding with default processing");
+        }
+      }
+
+      console.log("Processing SQS message:", {
+        messageId: record.messageId,
+        body: messageBody,
+      });
+
+      // Exécuter la logique principale
+      await processRSSCollector();
+
+    } catch (error: any) {
+      console.error(`Error processing SQS message ${record.messageId}:`, error);
+      errors.push({ messageId: record.messageId, error });
+    }
+  }
+
+  // Si des erreurs se sont produites, throw pour que SQS gère les retries
+  if (errors.length > 0) {
+    throw new Error(`Failed to process ${errors.length} message(s). First error: ${errors[0].error.message}`);
+  }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      success: true,
+      messagesProcessed: event.Records.length,
+    }),
+  };
+};
+
+/**
+ * Logique principale du RSS Collector
+ */
+async function processRSSCollector() {
   try {
     for (const feed of RSS_FEEDS) {
       try {
@@ -230,13 +277,11 @@ export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) =
         // Continue avec les autres feeds
       }
     }
-
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (error: any) {
     console.error("RSS Collector error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    throw error; // Re-throw pour que SQS gère les retries
   }
-};
+}
 
 async function collectRSSFeed(feed: { url: string; name: string; type: string; platform: 'youtube' | 'twitter' | 'truth-social' | 'rss' }) {
   console.log(`Fetching RSS feed: ${feed.name}`);

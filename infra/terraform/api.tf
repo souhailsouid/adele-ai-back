@@ -34,8 +34,8 @@ resource "aws_lambda_function" "api" {
   handler          = "index.handler"
   filename         = "${path.module}/../../services/api/api.zip"                   # ← produit par npm run bundle
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip") # ← détecte automatiquement les changements
-  timeout          = 30  # 30s pour limiter les timeouts sur endpoints IA (ex: /ai/options-analysis)
-  memory_size      = 512
+  timeout          = 60  # 60s pour gérer les endpoints funds lourds (portfolio, diffs, changes)
+  memory_size      = 1536  # 1536MB = plus de CPU (proportionnel). Améliore les performances des endpoints funds lourds
 
   depends_on = [aws_cloudwatch_log_group.api_lambda]
 
@@ -55,6 +55,23 @@ resource "aws_lambda_function" "api" {
       NEO4J_DATABASE         = var.neo4j_database
     }
   }
+
+  # ⚠️ COÛTS AWS :
+  # - reserved_concurrent_executions : GRATUIT (mais limite la concurrence)
+  # - provisioned_concurrency : PAYANT (~$0.015/heure par exécution réservée)
+  # 
+  # ⚠️ NOTE: Pas de réserve de concurrence car le compte AWS a une limite très basse
+  # Le throttling sera géré par les retries automatiques (maximum_retry_attempts = 2)
+  # Si le throttling persiste, envisager d'augmenter la limite de compte AWS ou utiliser provisioned concurrency
+  # reserved_concurrent_executions = 20  # Désactivé pour éviter l'erreur AWS
+}
+
+# Configuration des retries pour gérer les throttles temporaires (GRATUIT)
+resource "aws_lambda_function_event_invoke_config" "api" {
+  function_name = aws_lambda_function.api.function_name
+  
+  maximum_retry_attempts = 2
+  maximum_event_age_in_seconds = 21600
 }
 
 # Integration Lambda proxy
@@ -64,6 +81,9 @@ resource "aws_apigatewayv2_integration" "api_lambda" {
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_function.api.arn
   payload_format_version = "2.0"
+  # API Gateway v2 limite max: 30000ms (30s). La Lambda a 60s pour gérer les endpoints lourds.
+  # Si la Lambda prend > 30s, l'API Gateway retournera 504, mais la Lambda continuera.
+  timeout_milliseconds   = 30000
 
   depends_on = [aws_lambda_permission.api_invoke]
 }
@@ -121,46 +141,8 @@ resource "aws_apigatewayv2_route" "post_chat" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
-# Routes Funds
-resource "aws_apigatewayv2_route" "post_funds" {
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = "POST /funds"
-  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-}
-
-resource "aws_apigatewayv2_route" "get_funds" {
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = "GET /funds"
-  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-}
-
-resource "aws_apigatewayv2_route" "get_fund" {
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = "GET /funds/{id}"
-  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-}
-
-resource "aws_apigatewayv2_route" "get_fund_holdings" {
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = "GET /funds/{id}/holdings"
-  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-}
-
-resource "aws_apigatewayv2_route" "get_fund_filings" {
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = "GET /funds/{id}/filings"
-  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
-}
+# Routes Funds - MIGRÉES vers api-data-funds-routes.tf (API Gateway 2)
+# Toutes les routes /funds/* sont maintenant sur l'API Gateway 2 (http_data)
 
 # Routes Companies
 resource "aws_apigatewayv2_route" "post_companies" {

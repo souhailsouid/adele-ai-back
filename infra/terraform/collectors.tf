@@ -15,7 +15,7 @@ resource "aws_lambda_function" "collector_sec_watcher" {
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/collector-sec-watcher/collector-sec-watcher.zip"
   timeout       = 300
-  memory_size   = 512
+  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_sec_watcher]
 
@@ -24,29 +24,32 @@ resource "aws_lambda_function" "collector_sec_watcher" {
       SUPABASE_URL        = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
       EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
     }
   }
 }
 
-# Cron: toutes les 5 minutes
+# Cron: toutes les 2 heures (TEMPORAIRE - réduit la charge en attendant l'augmentation de limite)
+# TODO: Remettre à "rate(1 hour)" une fois la limite de compte augmentée à 1000
 resource "aws_cloudwatch_event_rule" "collector_sec_watcher_cron" {
   name                = "${var.project}-${var.stage}-collector-sec-watcher-cron"
-  description         = "Déclenche le collector SEC watcher toutes les 5 minutes"
-  schedule_expression = "rate(5 minutes)"
+  description         = "Déclenche le collector SEC watcher toutes les 5 heures (temporaire)"
+  schedule_expression = "rate(5 hours)"
 }
 
+# EventBridge → SQS (au lieu de Lambda directement)
 resource "aws_cloudwatch_event_target" "collector_sec_watcher" {
   rule      = aws_cloudwatch_event_rule.collector_sec_watcher_cron.name
   target_id = "CollectorSECWatcher"
-  arn       = aws_lambda_function.collector_sec_watcher.arn
+  arn       = aws_sqs_queue.collectors_queue.arn
 }
 
-resource "aws_lambda_permission" "collector_sec_watcher_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_sec_watcher.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_sec_watcher_cron.arn
+# Lambda consomme depuis SQS
+resource "aws_lambda_event_source_mapping" "collector_sec_watcher_sqs" {
+  event_source_arn = aws_sqs_queue.collectors_queue.arn
+  function_name    = aws_lambda_function.collector_sec_watcher.arn
+  batch_size       = 1  # Traiter 1 message à la fois pour éviter la surcharge
+  enabled          = true
 }
 
 # ============================================
@@ -65,7 +68,7 @@ resource "aws_lambda_function" "collector_rss" {
   filename      = "${path.module}/../../workers/collector-rss/collector-rss.zip"
   source_code_hash = filebase64sha256("${path.module}/../../workers/collector-rss/collector-rss.zip")
   timeout       = 300
-  memory_size   = 512
+  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_rss]
 
@@ -74,130 +77,137 @@ resource "aws_lambda_function" "collector_rss" {
       SUPABASE_URL        = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
       EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
     }
   }
 }
 
-# Cron: toutes les 15 minutes
+# Cron: toutes les 30 minutes (TEMPORAIRE - réduit la charge en attendant l'augmentation de limite)
+# TODO: Remettre à "rate(15 minutes)" une fois la limite de compte augmentée à 1000
 resource "aws_cloudwatch_event_rule" "collector_rss_cron" {
   name                = "${var.project}-${var.stage}-collector-rss-cron"
-  description         = "Déclenche le collector RSS toutes les 15 minutes"
-  schedule_expression = "rate(15 minutes)"
+  description         = "Déclenche le collector RSS toutes les 45 minutes (temporaire)"
+  schedule_expression = "rate(45 minutes)"
 }
 
+# EventBridge → SQS (au lieu de Lambda directement)
 resource "aws_cloudwatch_event_target" "collector_rss" {
   rule      = aws_cloudwatch_event_rule.collector_rss_cron.name
   target_id = "CollectorRSS"
-  arn       = aws_lambda_function.collector_rss.arn
+  arn       = aws_sqs_queue.collectors_queue.arn
 }
 
-resource "aws_lambda_permission" "collector_rss_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_rss.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_rss_cron.arn
+# Lambda consomme depuis SQS
+resource "aws_lambda_event_source_mapping" "collector_rss_sqs" {
+  event_source_arn = aws_sqs_queue.collectors_queue.arn
+  function_name    = aws_lambda_function.collector_rss.arn
+  batch_size       = 1  # Traiter 1 message à la fois
+  enabled          = true
 }
 
 # ============================================
 # Collector CoinGlass
+# OBSOLÈTE - Désactivé (non utilisé dans le frontend)
 # ============================================
-resource "aws_cloudwatch_log_group" "collector_coinglass" {
-  name              = "/aws/lambda/${var.project}-${var.stage}-collector-coinglass"
-  retention_in_days = 14
-}
+# resource "aws_cloudwatch_log_group" "collector_coinglass" {
+#   name              = "/aws/lambda/${var.project}-${var.stage}-collector-coinglass"
+#   retention_in_days = 14
+# }
 
-resource "aws_lambda_function" "collector_coinglass" {
-  function_name = "${var.project}-${var.stage}-collector-coinglass"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/collector-coinglass/collector-coinglass.zip"
-  timeout       = 300
-  memory_size   = 512
+# resource "aws_lambda_function" "collector_coinglass" {
+#   function_name = "${var.project}-${var.stage}-collector-coinglass"
+#   role          = aws_iam_role.collector_role.arn
+#   runtime       = "nodejs20.x"
+#   handler       = "index.handler"
+#   filename      = "${path.module}/../../workers/collector-coinglass/collector-coinglass.zip"
+#   timeout       = 300
+#   memory_size   = 512
 
-  depends_on = [aws_cloudwatch_log_group.collector_coinglass]
+#   depends_on = [aws_cloudwatch_log_group.collector_coinglass]
 
-  environment {
-    variables = {
-      SUPABASE_URL        = var.supabase_url
-      SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
-      COINGLASS_API_KEY   = var.coinglass_api_key
-    }
-  }
-}
+#   environment {
+#     variables = {
+#       SUPABASE_URL        = var.supabase_url
+#       SUPABASE_SERVICE_KEY = var.supabase_service_key
+#       EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+#       COINGLASS_API_KEY   = var.coinglass_api_key
+#     }
+#   }
+# }
 
-# Cron: toutes les heures
-resource "aws_cloudwatch_event_rule" "collector_coinglass_cron" {
-  name                = "${var.project}-${var.stage}-collector-coinglass-cron"
-  description         = "Déclenche le collector CoinGlass toutes les heures"
-  schedule_expression = "rate(1 hour)"
-}
+# # Cron: toutes les heures
+# resource "aws_cloudwatch_event_rule" "collector_coinglass_cron" {
+#   name                = "${var.project}-${var.stage}-collector-coinglass-cron"
+#   description         = "Déclenche le collector CoinGlass toutes les heures"
+#   schedule_expression = "rate(1 hour)"
+#   state               = "DISABLED"  # Désactivé
+# }
 
-resource "aws_cloudwatch_event_target" "collector_coinglass" {
-  rule      = aws_cloudwatch_event_rule.collector_coinglass_cron.name
-  target_id = "CollectorCoinGlass"
-  arn       = aws_lambda_function.collector_coinglass.arn
-}
+# resource "aws_cloudwatch_event_target" "collector_coinglass" {
+#   rule      = aws_cloudwatch_event_rule.collector_coinglass_cron.name
+#   target_id = "CollectorCoinGlass"
+#   arn       = aws_lambda_function.collector_coinglass.arn
+# }
 
-resource "aws_lambda_permission" "collector_coinglass_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_coinglass.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_coinglass_cron.arn
-}
+# resource "aws_lambda_permission" "collector_coinglass_events" {
+#   statement_id  = "AllowExecutionFromCloudWatch"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.collector_coinglass.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.collector_coinglass_cron.arn
+# }
 
 # ============================================
 # Collector FMP Signals
+# OBSOLÈTE - Désactivé (non utilisé)
 # ============================================
-resource "aws_cloudwatch_log_group" "collector_fmp_signals" {
-  name              = "/aws/lambda/${var.project}-${var.stage}-collector-fmp-signals"
-  retention_in_days = 14
-}
+# resource "aws_cloudwatch_log_group" "collector_fmp_signals" {
+#   name              = "/aws/lambda/${var.project}-${var.stage}-collector-fmp-signals"
+#   retention_in_days = 14
+# }
 
-resource "aws_lambda_function" "collector_fmp_signals" {
-  function_name = "${var.project}-${var.stage}-collector-fmp-signals"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip"
-  source_code_hash = filebase64sha256("${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip")
-  timeout       = 300
-  memory_size   = 512
+# resource "aws_lambda_function" "collector_fmp_signals" {
+#   function_name = "${var.project}-${var.stage}-collector-fmp-signals"
+#   role          = aws_iam_role.collector_role.arn
+#   runtime       = "nodejs20.x"
+#   handler       = "index.handler"
+#   filename      = "${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip"
+#   source_code_hash = filebase64sha256("${path.module}/../../workers/collector-fmp-signals/collector-fmp-signals.zip")
+#   timeout       = 300
+#   memory_size   = 512
 
-  depends_on = [aws_cloudwatch_log_group.collector_fmp_signals]
+#   depends_on = [aws_cloudwatch_log_group.collector_fmp_signals]
 
-  environment {
-    variables = {
-      SUPABASE_URL        = var.supabase_url
-      SUPABASE_SERVICE_KEY = var.supabase_service_key
-      FMP_API_KEY         = var.fmp_api_key
-    }
-  }
-}
+#   environment {
+#     variables = {
+#       SUPABASE_URL        = var.supabase_url
+#       SUPABASE_SERVICE_KEY = var.supabase_service_key
+#       FMP_API_KEY         = var.fmp_api_key
+#     }
+#   }
+# }
 
-# Cron: toutes les heures
-resource "aws_cloudwatch_event_rule" "collector_fmp_signals_cron" {
-  name                = "${var.project}-${var.stage}-collector-fmp-signals-cron"
-  description         = "Déclenche le collector FMP Signals toutes les heures"
-  schedule_expression = "rate(1 hour)"
-}
+# # Cron: toutes les heures
+# resource "aws_cloudwatch_event_rule" "collector_fmp_signals_cron" {
+#   name                = "${var.project}-${var.stage}-collector-fmp-signals-cron"
+#   description         = "Déclenche le collector FMP Signals toutes les heures"
+#   schedule_expression = "rate(1 hour)"
+#   state               = "DISABLED"  # Désactivé
+# }
 
-resource "aws_cloudwatch_event_target" "collector_fmp_signals" {
-  rule      = aws_cloudwatch_event_rule.collector_fmp_signals_cron.name
-  target_id = "CollectorFMPSignals"
-  arn       = aws_lambda_function.collector_fmp_signals.arn
-}
+# resource "aws_cloudwatch_event_target" "collector_fmp_signals" {
+#   rule      = aws_cloudwatch_event_rule.collector_fmp_signals_cron.name
+#   target_id = "CollectorFMPSignals"
+#   arn       = aws_lambda_function.collector_fmp_signals.arn
+# }
 
-resource "aws_lambda_permission" "collector_fmp_signals_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_fmp_signals.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_fmp_signals_cron.arn
-}
+# resource "aws_lambda_permission" "collector_fmp_signals_events" {
+#   statement_id  = "AllowExecutionFromCloudWatch"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.collector_fmp_signals.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.collector_fmp_signals_cron.arn
+# }
 
 # ============================================
 # Collector SEC Company Filings
@@ -214,7 +224,7 @@ resource "aws_lambda_function" "collector_sec_company_filings" {
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/collector-sec-company-filings/collector-sec-company-filings.zip"
   timeout       = 300
-  memory_size   = 512
+  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_sec_company_filings]
 
@@ -223,6 +233,7 @@ resource "aws_lambda_function" "collector_sec_company_filings" {
       SUPABASE_URL        = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
       EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
     }
   }
 }
@@ -234,69 +245,72 @@ resource "aws_cloudwatch_event_rule" "collector_sec_company_filings_cron" {
   schedule_expression = "cron(0 9 * * ? *)" # 9h UTC tous les jours
 }
 
+# EventBridge → SQS (au lieu de Lambda directement)
 resource "aws_cloudwatch_event_target" "collector_sec_company_filings" {
   rule      = aws_cloudwatch_event_rule.collector_sec_company_filings_cron.name
   target_id = "CollectorSECCompanyFilings"
-  arn       = aws_lambda_function.collector_sec_company_filings.arn
+  arn       = aws_sqs_queue.collectors_queue.arn
 }
 
-resource "aws_lambda_permission" "collector_sec_company_filings_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_sec_company_filings.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_sec_company_filings_cron.arn
+# Lambda consomme depuis SQS
+resource "aws_lambda_event_source_mapping" "collector_sec_company_filings_sqs" {
+  event_source_arn = aws_sqs_queue.collectors_queue.arn
+  function_name    = aws_lambda_function.collector_sec_company_filings.arn
+  batch_size       = 1  # Traiter 1 message à la fois
+  enabled          = true
 }
 
 # ============================================
 # Collector ScrapeCreators
+# OBSOLÈTE - Désactivé (non utilisé dans le frontend)
 # ============================================
-resource "aws_cloudwatch_log_group" "collector_scrapecreators" {
-  name              = "/aws/lambda/${var.project}-${var.stage}-collector-scrapecreators"
-  retention_in_days = 14
-}
+# resource "aws_cloudwatch_log_group" "collector_scrapecreators" {
+#   name              = "/aws/lambda/${var.project}-${var.stage}-collector-scrapecreators"
+#   retention_in_days = 14
+# }
 
-resource "aws_lambda_function" "collector_scrapecreators" {
-  function_name = "${var.project}-${var.stage}-collector-scrapecreators"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/collector-scrapecreators/collector-scrapecreators.zip"
-  timeout       = 300
-  memory_size   = 512
+# resource "aws_lambda_function" "collector_scrapecreators" {
+#   function_name = "${var.project}-${var.stage}-collector-scrapecreators"
+#   role          = aws_iam_role.collector_role.arn
+#   runtime       = "nodejs20.x"
+#   handler       = "index.handler"
+#   filename      = "${path.module}/../../workers/collector-scrapecreators/collector-scrapecreators.zip"
+#   timeout       = 300
+#   memory_size   = 512
 
-  depends_on = [aws_cloudwatch_log_group.collector_scrapecreators]
+#   depends_on = [aws_cloudwatch_log_group.collector_scrapecreators]
 
-  environment {
-    variables = {
-      SUPABASE_URL        = var.supabase_url
-      SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
-      SCRAPECREATORS_API_KEY = var.scrapecreators_api_key
-    }
-  }
-}
+#   environment {
+#     variables = {
+#       SUPABASE_URL        = var.supabase_url
+#       SUPABASE_SERVICE_KEY = var.supabase_service_key
+#       EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+#       SCRAPECREATORS_API_KEY = var.scrapecreators_api_key
+#     }
+#   }
+# }
 
-# Cron: toutes les 5 minutes
-resource "aws_cloudwatch_event_rule" "collector_scrapecreators_cron" {
-  name                = "${var.project}-${var.stage}-collector-scrapecreators-cron"
-  description         = "Déclenche le collector ScrapeCreators toutes les 5 minutes"
-  schedule_expression = "rate(5 minutes)"
-}
+# # Cron: toutes les 5 minutes
+# resource "aws_cloudwatch_event_rule" "collector_scrapecreators_cron" {
+#   name                = "${var.project}-${var.stage}-collector-scrapecreators-cron"
+#   description         = "Déclenche le collector ScrapeCreators toutes les 5 minutes"
+#   schedule_expression = "rate(5 minutes)"
+#   state               = "DISABLED"  # Désactivé
+# }
 
-resource "aws_cloudwatch_event_target" "collector_scrapecreators" {
-  rule      = aws_cloudwatch_event_rule.collector_scrapecreators_cron.name
-  target_id = "CollectorScrapeCreators"
-  arn       = aws_lambda_function.collector_scrapecreators.arn
-}
+# resource "aws_cloudwatch_event_target" "collector_scrapecreators" {
+#   rule      = aws_cloudwatch_event_rule.collector_scrapecreators_cron.name
+#   target_id = "CollectorScrapeCreators"
+#   arn       = aws_lambda_function.collector_scrapecreators.arn
+# }
 
-resource "aws_lambda_permission" "collector_scrapecreators_events" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.collector_scrapecreators.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.collector_scrapecreators_cron.arn
-}
+# resource "aws_lambda_permission" "collector_scrapecreators_events" {
+#   statement_id  = "AllowExecutionFromCloudWatch"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.collector_scrapecreators.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.collector_scrapecreators_cron.arn
+# }
 
 # ============================================
 # IAM Role partagé pour tous les collectors

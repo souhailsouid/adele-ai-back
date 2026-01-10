@@ -1,0 +1,22 @@
+{
+  "name": "filing-retry-handler",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda worker to retry failed 13F filings",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "bundle": "npm run build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-eventbridge": "^3.490.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "@types/node": "^20.10.6",
+    "archiver": "^7.0.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.3"
+  }
+}

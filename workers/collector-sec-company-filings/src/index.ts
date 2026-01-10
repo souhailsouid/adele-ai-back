@@ -1,6 +1,6 @@
 /**
  * Lambda pour découvrir automatiquement les filings SEC des entreprises
- * Déclenché par EventBridge (cron: quotidien ou à la demande)
+ * Déclenché par SQS (via EventBridge cron: quotidien ou à la demande)
  * 
  * Form types supportés:
  * - 8-K: Événements importants
@@ -10,7 +10,7 @@
  * - DEF 14A: Proxy statements
  */
 
-import { EventBridgeEvent } from "aws-lambda";
+import { SQSEvent } from "aws-lambda";
 import { supabase } from "./supabase";
 import { PutEventsCommand, EventBridgeClient } from "@aws-sdk/client-eventbridge";
 
@@ -27,9 +27,50 @@ interface Company {
 // Form types à suivre (prioritaires)
 const FORM_TYPES = ["8-K", "10-K", "10-Q", "4", "DEF 14A"];
 
-export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) => {
-  console.log("SEC Company Filings Collector triggered");
+export const handler = async (event: SQSEvent) => {
+  console.log("SEC Company Filings Collector triggered via SQS");
+  console.log(`Received ${event.Records.length} message(s) from SQS`);
 
+  const errors: Array<{ messageId: string; error: any }> = [];
+
+  for (const record of event.Records) {
+    try {
+      let messageBody: any = {};
+      if (record.body) {
+        try {
+          messageBody = JSON.parse(record.body);
+        } catch (e) {
+          console.log("SQS message body is not JSON (expected for cron), proceeding with default processing");
+        }
+      }
+
+      console.log("Processing SQS message:", {
+        messageId: record.messageId,
+        body: messageBody,
+      });
+
+      await processSECCompanyFilingsCollector();
+
+    } catch (error: any) {
+      console.error(`Error processing SQS message ${record.messageId}:`, error);
+      errors.push({ messageId: record.messageId, error });
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Failed to process ${errors.length} message(s). First error: ${errors[0].error.message}`);
+  }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      success: true,
+      messagesProcessed: event.Records.length,
+    }),
+  };
+};
+
+async function processSECCompanyFilingsCollector() {
   try {
     // 1. Récupérer toutes les entreprises à suivre
     const { data: companies, error: companiesError } = await supabase
@@ -39,7 +80,7 @@ export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) =
     if (companiesError) throw companiesError;
     if (!companies || companies.length === 0) {
       console.log("No companies to watch");
-      return { statusCode: 200, body: JSON.stringify({ message: "No companies configured" }) };
+      return;
     }
 
     console.log(`Checking ${companies.length} companies for new filings`);
@@ -56,19 +97,17 @@ export const handler = async (event: EventBridgeEvent<"Scheduled Event", any>) =
       }
     }
 
+    console.log(`SEC Company Filings Collector completed: ${totalDiscovered} filings discovered across ${companies.length} companies`);
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        companies_checked: companies.length,
-        filings_discovered: totalDiscovered,
-      }),
+      success: true,
+      companies_checked: companies.length,
+      filings_discovered: totalDiscovered,
     };
   } catch (error: any) {
     console.error("SEC Company Filings Collector error:", error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    throw error; // Re-throw pour que SQS gère les retries
   }
-};
+}
 
 async function checkCompanyForNewFilings(company: Company): Promise<number> {
   console.log(`Checking filings for ${company.name} (CIK: ${company.cik})`);

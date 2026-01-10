@@ -10,6 +10,7 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Authorization,Content-Type,Accept",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  "Content-Type": "application/json",
 };
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
@@ -24,7 +25,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     // Auth - API Gateway valide déjà le JWT
     const jwtClaims = (requestContext as any)?.authorizer?.jwt?.claims;
     if (!jwtClaims) {
-      return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: "unauthorized" }) };
+      return { 
+        statusCode: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+        body: JSON.stringify({ error: "unauthorized" }) 
+      };
     }
 
     // Trouver la route
@@ -38,14 +43,21 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     const result = await routeHandler(event);
     // Normalize response + always attach CORS headers
     if (result && typeof result === "object" && "statusCode" in result) {
-      return { ...(result as any), headers: { ...corsHeaders, ...((result as any).headers || {}) } };
+      return { 
+        ...(result as any), 
+        headers: { ...corsHeaders, "Content-Type": "application/json", ...((result as any).headers || {}) } 
+      };
     }
-    return { statusCode: 200, headers: corsHeaders, body: JSON.stringify(result) };
+    return { 
+      statusCode: 200, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+      body: JSON.stringify(result) 
+    };
   } catch (error: any) {
     console.error("Handler error:", error);
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       body: JSON.stringify({
         error: error.message || "Internal server error",
         requestId: event.requestContext?.requestId,

@@ -87,6 +87,48 @@ INSERT INTO funds (name, cik, tier_influence, category) VALUES
 
 - **Architecture** : Voir `ARCHITECTURE.md`
 - **API** : Voir `openapi/spec.yaml`
+- **Tests et Validation** : Voir `TESTS_VALIDATION_GUIDE.md` (guide complet de tous les tests)
+- **Index des Scripts de Test** : Voir `scripts/TEST_INDEX.md`
+
+## 🧪 Tests et Validation
+
+Tous les tests sont organisés dans le dossier `tests/` pour faciliter la maintenance.
+
+### Tests d'Analyse Stratégique
+```bash
+# Test complet de validation de l'analyse stratégique
+npx tsx tests/strategic-analysis/test-strategic-analysis.ts
+```
+
+**Fonctionnalités testées** :
+- Structure de la réponse `StrategicAnalysis`
+- Calculs de `portfolio_impact_pct` et `portfolio_weight`
+- Classification par conviction (high/medium/low/noise)
+- Détection des tendances multi-trimestres
+- Validation de `all_movements`, `sector_flows_filtered`, `has_only_unknown_sectors`
+- Test avec `include_low_conviction=true`
+
+### Tests de Notifications d'Accumulation
+```bash
+# Test rapide de toutes les routes
+./tests/routes/test-all-routes.sh <TOKEN>
+```
+
+**Routes testées** :
+- `GET /funds/{id}/diffs/strategic` (avec/sans `include_low_conviction`)
+- `GET /notifications/accumulations?only_global=true` (avec filtres)
+
+### Scripts de Diagnostic
+```bash
+# Diagnostic automatisé des accumulations
+npx tsx tests/accumulations/diagnose-accumulations.ts <fund_id>
+```
+
+**Documentation** :
+- `tests/README.md` : Vue d'ensemble de tous les tests
+- `tests/strategic-analysis/VALIDATION_GUIDE.md` : Guide complet
+- `tests/strategic-analysis/QUICK_REFERENCE.md` : Référence rapide
+- `tests/accumulations/diagnose-accumulations-summary.md` : Guide d'utilisation
 
 ## 🔍 Vérification
 

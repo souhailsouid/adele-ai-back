@@ -29,10 +29,12 @@ resource "aws_lambda_function" "alert_sender" {
 }
 
 # Cron: toutes les minutes pour traiter les alertes en attente
+# DÉSACTIVÉ - Le alert-sender a une erreur Supabase et n'est pas utilisé
 resource "aws_cloudwatch_event_rule" "alert_sender_cron" {
   name                = "${var.project}-${var.stage}-alert-sender-cron"
   description         = "Déclenche le alert-sender toutes les minutes pour traiter les alertes"
   schedule_expression = "rate(1 minute)"
+  state               = "DISABLED"  # Désactivé
 }
 
 resource "aws_cloudwatch_event_target" "alert_sender" {

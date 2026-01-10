@@ -61,6 +61,26 @@ resource "aws_apigatewayv2_route" "post_analyze_earnings_hub" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# POST /analyze/catalyst-calendar
+# Calendrier catalyst agrégé (Macro, FDA, Earnings, Whale Risk)
+resource "aws_apigatewayv2_route" "post_analyze_catalyst_calendar" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /analyze/catalyst-calendar"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# GET /earnings/upcoming/{ticker}
+# Récupérer les prochains earnings pour un ticker donné
+resource "aws_apigatewayv2_route" "get_earnings_upcoming_ticker" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /earnings/upcoming/{ticker}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 # ============================================
 # Routes de récupération des résultats
 # ============================================

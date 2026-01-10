@@ -1,0 +1,21 @@
+{
+  "name": "notification-generator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda worker pour générer automatiquement les notifications de funds",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "zip": "cd dist && zip -r ../notification-generator.zip .",
+    "bundle": "npm run build && npm run zip"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.3",
+    "@types/aws-lambda": "^8.10.130",
+    "@types/node": "^20.10.0"
+  }
+}

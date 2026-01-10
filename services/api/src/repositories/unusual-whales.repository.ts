@@ -1658,14 +1658,30 @@ export class UnusualWhalesRepository {
       const queryParams = new URLSearchParams();
 
       if (params) {
-        if (params.date) {
-          queryParams.append('date', params.date);
+        // Paramètres de date (target_date_min/max)
+        if (params.target_date_min) {
+          queryParams.append('target_date_min', params.target_date_min);
         }
+        if (params.target_date_max) {
+          queryParams.append('target_date_max', params.target_date_max);
+        }
+        // Paramètres de date d'annonce (announced_date_min/max)
+        if (params.announced_date_min) {
+          queryParams.append('announced_date_min', params.announced_date_min);
+        }
+        if (params.announced_date_max) {
+          queryParams.append('announced_date_max', params.announced_date_max);
+        }
+        // Filtres par ticker et drug
+        if (params.ticker) {
+          queryParams.append('ticker', params.ticker);
+        }
+        if (params.drug) {
+          queryParams.append('drug', params.drug);
+        }
+        // Limite (1-200 selon la doc UW)
         if (params.limit !== undefined) {
-          queryParams.append('limit', String(Math.min(Math.max(params.limit, 1), 500)));
-        }
-        if (params.page !== undefined) {
-          queryParams.append('page', String(params.page));
+          queryParams.append('limit', String(Math.min(Math.max(params.limit, 1), 200)));
         }
       }
 

@@ -1,0 +1,16 @@
+# Ignorer les fichiers temporaires de test
+*.log
+*.tmp
+*.cache
+
+# Ignorer les résultats de test (si créés)
+results/
+output/
+*.json
+!package.json
+
+# Garder tous les fichiers de test et documentation
+!*.ts
+!*.sql
+!*.md
+!*.sh

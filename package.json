@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-eventbridge": "^3.965.0",
+    "@supabase/supabase-js": "^2.90.1",
+    "ts-node": "^10.9.2"
+  }
+}

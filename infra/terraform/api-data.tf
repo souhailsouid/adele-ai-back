@@ -8,10 +8,10 @@ resource "aws_cloudwatch_log_group" "api_data_gw" {
   retention_in_days = 14
 }
 
-# API HTTP pour les données brutes (FMP + UW)
+# API HTTP pour les données brutes (FMP + UW + Funds)
 resource "aws_apigatewayv2_api" "http_data" {
   name          = "${var.project}-${var.stage}-http-data-raw"
-  description   = "API Gateway pour les routes de données brutes (FMP et Unusual Whales)"
+  description   = "API Gateway pour les routes de données brutes (FMP, Unusual Whales, Funds)"
   protocol_type = "HTTP"
   cors_configuration {
     # CORS: autoriser toutes les origines (Swagger, localhost, etc.)
@@ -30,6 +30,9 @@ resource "aws_apigatewayv2_integration" "api_data_lambda" {
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_function.api.arn
   payload_format_version = "2.0"
+  # API Gateway v2 limite max: 30000ms (30s). La Lambda a 60s pour gérer les endpoints lourds.
+  # Si la Lambda prend > 30s, l'API Gateway retournera 504, mais la Lambda continuera.
+  timeout_milliseconds   = 30000
 
   depends_on = [aws_lambda_permission.api_data_invoke]
 }

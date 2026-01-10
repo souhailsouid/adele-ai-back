@@ -74,6 +74,7 @@ CREATE TABLE fund_holdings (
 CREATE INDEX idx_fund_holdings_fund_id ON fund_holdings(fund_id);
 CREATE INDEX idx_fund_holdings_filing_id ON fund_holdings(filing_id);
 CREATE INDEX idx_fund_holdings_ticker ON fund_holdings(ticker);
+CREATE INDEX idx_fund_holdings_filing_id_type ON fund_holdings(filing_id, type) WHERE type = 'stock';
 
 -- Table fund_holdings_diff (diff entre filings)
 CREATE TABLE fund_holdings_diff (
@@ -91,6 +92,9 @@ CREATE TABLE fund_holdings_diff (
 
 CREATE INDEX idx_fund_holdings_diff_fund_id ON fund_holdings_diff(fund_id);
 CREATE INDEX idx_fund_holdings_diff_ticker ON fund_holdings_diff(ticker);
+CREATE INDEX idx_fund_holdings_diff_filing_id_new ON fund_holdings_diff(filing_id_new);
+CREATE INDEX idx_fund_holdings_diff_fund_id_ticker ON fund_holdings_diff(fund_id, ticker);
+CREATE INDEX idx_fund_holdings_diff_fund_id_filing_id_new ON fund_holdings_diff(fund_id, filing_id_new);
 
 -- Table fund_signals (signaux générés depuis 13F)
 CREATE TABLE fund_signals (

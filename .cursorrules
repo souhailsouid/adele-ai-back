@@ -32,3 +32,121 @@ Tu es un développeur Senior Fullstack expert en TypeScript, Next.js (App Router
 
 
 - **Interdiction:** Ne génère plus de fichiers .md de diagnostic. Si un test échoue, propose un log `console.error` ou un script de test temporaire en `.ts`.
+
+# BACKEND MONITORING & ADMIN RULES
+
+## Tech Stack & Context
+- **Database:** Supabase (PostgreSQL) accessed via `supabase-js` (NO Prisma).
+- **Execution:** Serverless Lambdas / Edge Functions.
+- **Goal:** Full observability of background jobs (13F parsing, 10K/10Q parsing, CRONs) for admin dashboard.
+
+## Database Schema Standards (Supabase)
+Always use these monitoring tables. Write code that interacts with them for ALL background tasks.
+
+### 1. `file_processing_queue` - Tracks file parsing status
+**Columns:**
+- `id` (uuid, primary key, default: gen_random_uuid())
+- `filename` (text, required) - Original filename or identifier
+- `status` (text, required) - ENUM: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+- `doc_type` (text) - ENUM: '13F' | '10K' | '10Q' | 'RSS' | 'OTHER'
+- `filing_id` (integer, nullable) - Reference to fund_filings.id if applicable
+- `fund_id` (integer, nullable) - Reference to funds.id if applicable
+- `retry_count` (integer, default: 0) - Number of retry attempts
+- `max_retries` (integer, default: 3) - Maximum retry attempts before permanent failure
+- `error_log` (text, nullable) - Last error message
+- `metrics` (jsonb, nullable) - Validation metrics (e.g., {"rows_parsed": 150, "holdings_count": 45})
+- `started_at` (timestamptz, nullable) - When processing started
+- `completed_at` (timestamptz, nullable) - When processing completed/failed
+- `created_at` (timestamptz, default: now())
+- `updated_at` (timestamptz, default: now())
+
+**Indexes:**
+- `idx_file_processing_queue_status` on (status) WHERE status IN ('PENDING', 'PROCESSING')
+- `idx_file_processing_queue_filing_id` on (filing_id) WHERE filing_id IS NOT NULL
+- `idx_file_processing_queue_created_at` on (created_at DESC)
+
+### 2. `cron_registry` - Tracks recurring jobs health
+**Columns:**
+- `id` (text, primary key) - Cron identifier (e.g., 'collector-sec-watcher', 'parser-13f')
+- `is_active` (boolean, default: true) - If false, cron should abort immediately
+- `last_status` (text) - ENUM: 'SUCCESS' | 'FAILED' | 'RUNNING' | null
+- `last_run_at` (timestamptz, nullable) - Last execution timestamp
+- `last_success_at` (timestamptz, nullable) - Last successful execution
+- `last_error` (text, nullable) - Last error message
+- `run_count` (integer, default: 0) - Total number of executions
+- `success_count` (integer, default: 0) - Total successful executions
+- `failure_count` (integer, default: 0) - Total failed executions
+- `schedule_expression` (text, nullable) - EventBridge schedule (e.g., 'rate(5 minutes)')
+- `next_run_at` (timestamptz, nullable) - Estimated next run time
+- `created_at` (timestamptz, default: now())
+- `updated_at` (timestamptz, default: now())
+
+**Indexes:**
+- `idx_cron_registry_is_active` on (is_active) WHERE is_active = true
+- `idx_cron_registry_last_run_at` on (last_run_at DESC)
+
+## Coding Rules for Services & Lambdas
+
+### 1. Job/Queue Pattern (The "Wrapper" Rule)
+**MANDATORY** for any parsing function (13F, 10K, RSS, etc.):
+
+```typescript
+// Example lifecycle
+1. initJob(filename, docType, filingId?) -> returns jobId
+2. startJob(jobId) -> Set status to 'PROCESSING', started_at = now()
+3. Try/Catch: Wrap entire parsing logic
+4. On Success: completeJob(jobId, metrics?) -> Set status to 'COMPLETED', completed_at = now()
+5. On Failure: failJob(jobId, error, retryDelay?) -> Set status to 'FAILED', increment retry_count, save error_log
+```
+
+**Retry Logic:**
+- If `retry_count < max_retries`: Schedule retry (via SQS delay or EventBridge schedule)
+- If `retry_count >= max_retries`: Mark as permanently failed
+
+### 2. Supabase Admin Client
+For ALL backend admin operations (queue, cron registry), ALWAYS use the Service Role Key client to bypass RLS.
+
+**Import pattern:**
+```typescript
+import { createAdminClient } from '@/utils/supabase/admin';
+// or in workers:
+import { createAdminClient } from '../utils/supabase/admin';
+```
+
+**Usage:**
+```typescript
+const adminClient = createAdminClient();
+const { data, error } = await adminClient
+  .from('file_processing_queue')
+  .insert({ ... });
+```
+
+### 3. CRON Jobs Pattern
+**MANDATORY** for every CRON function:
+
+```typescript
+1. Check cron_registry: const cron = await getCronStatus('cron-id')
+2. If !cron.is_active: Abort immediately, return { skipped: true, reason: 'inactive' }
+3. Log start: await updateCronStatus('cron-id', { last_status: 'RUNNING', last_run_at: now() })
+4. Try/Catch: Wrap entire cron logic
+5. On Success: await updateCronStatus('cron-id', { last_status: 'SUCCESS', last_success_at: now(), run_count: +1, success_count: +1 })
+6. On Failure: await updateCronStatus('cron-id', { last_status: 'FAILED', last_error: error.message, run_count: +1, failure_count: +1 })
+```
+
+### 4. Parsing Specifics (13F/10K)
+- **Always** extract validation metrics (e.g., `{"rows_parsed": 150, "holdings_count": 45, "validation_errors": 0}`)
+- Store metrics in `file_processing_queue.metrics` (JSONB column)
+- This allows the dashboard to verify data integrity alongside the "COMPLETED" status
+
+### 5. Error Logging
+- **Always** log full error details in `error_log` (not just message)
+- Include stack trace for backend errors
+- Include context (filing_id, fund_id, filename) in error message
+- Format: `[ERROR] ${timestamp}: ${error.message}\nStack: ${error.stack}\nContext: ${JSON.stringify(context)}`
+
+### 6. Metrics Collection
+For dashboard analytics, track:
+- Processing duration (started_at to completed_at)
+- Retry patterns (retry_count distribution)
+- Success/failure rates by doc_type
+- Most common errors (from error_log aggregation)

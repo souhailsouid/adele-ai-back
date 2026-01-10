@@ -107,7 +107,12 @@ function sleep(ms: number): Promise<void> {
 
 // API Clients - Lazy loading pour éviter les erreurs au chargement du module
 function getUnusualWhalesApiKey(): string {
-  return requireEnv("UNUSUAL_WHALES_API_KEY");
+  const apiKey = requireEnv("UNUSUAL_WHALES_API_KEY");
+  const trimmed = apiKey.trim();
+  if (!trimmed || trimmed.length === 0) {
+    throw new Error("UNUSUAL_WHALES_API_KEY is empty or contains only whitespace");
+  }
+  return trimmed;
 }
 
 function getFmpApiKey(): string {
@@ -132,10 +137,17 @@ async function fetchUnusualWhales(endpoint: string): Promise<any> {
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     console.error(`[fetchUnusualWhales] Error ${response.status}: ${errorText}`);
+    
+    // Diagnostic spécial pour les erreurs 401
+    if (response.status === 401) {
+      console.error(`[fetchUnusualWhales] Authentication error - Token may be invalid or expired`);
+      console.error(`[fetchUnusualWhales] Token length: ${apiKey.length}, prefix: ${apiKey.substring(0, 10)}...`);
+    }
+    
     if (response.status === 429) {
       throw new Error("Rate limit exceeded for Unusual Whales API");
     }
-    throw new Error(`Unusual Whales API error: ${response.status} ${response.statusText}`);
+    throw new Error(`Unusual Whales API error: ${response.status} ${response.statusText}: ${errorText}`);
   }
 
   const data = await response.json();

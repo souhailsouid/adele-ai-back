@@ -126,13 +126,37 @@ export class ApiClientService {
     // Gérer les erreurs HTTP
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-      logger.error(`API error ${response.status}`, {
-        endpoint,
-        url: sanitizedUrl,
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-      });
+      
+      // Diagnostic spécial pour les erreurs 401 (authentication)
+      if (response.status === 401) {
+        const hasApiKey = !!this.config.apiKey;
+        const apiKeyLength = this.config.apiKey?.length || 0;
+        const apiKeyHeader = this.config.apiKeyHeader || 'none';
+        const apiKeyPrefix = this.config.apiKey?.substring(0, 10) || 'N/A';
+        
+        logger.error(`API authentication error (401)`, {
+          endpoint,
+          url: sanitizedUrl,
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+          diagnostic: {
+            hasApiKey,
+            apiKeyLength,
+            apiKeyHeader,
+            apiKeyPrefix: `${apiKeyPrefix}...`,
+            envVarName: this.config.baseUrl.includes('unusualwhales') ? 'UNUSUAL_WHALES_API_KEY' : 'FMP_API_KEY',
+          },
+        });
+      } else {
+        logger.error(`API error ${response.status}`, {
+          endpoint,
+          url: sanitizedUrl,
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        });
+      }
 
       throw new ExternalApiError(
         this.config.baseUrl,
@@ -241,15 +265,25 @@ export function createUnusualWhalesClient(): ApiClientService {
     throw new Error('UNUSUAL_WHALES_API_KEY environment variable is required');
   }
 
+  // Vérifier que le token n'est pas vide ou ne contient pas seulement des espaces
+  const trimmedApiKey = apiKey.trim();
+  if (!trimmedApiKey || trimmedApiKey.length === 0) {
+    logger.error('UNUSUAL_WHALES_API_KEY is empty or contains only whitespace', {
+      apiKeyLength: apiKey.length,
+    });
+    throw new Error('UNUSUAL_WHALES_API_KEY environment variable is empty or invalid');
+  }
+
   logger.debug('Creating Unusual Whales client', {
-    hasApiKey: !!apiKey,
-    apiKeyLength: apiKey.length,
-    apiKeyPrefix: apiKey.substring(0, 10) + '...',
+    hasApiKey: !!trimmedApiKey,
+    apiKeyLength: trimmedApiKey.length,
+    apiKeyPrefix: trimmedApiKey.substring(0, 10) + '...',
+    apiKeySuffix: '...' + trimmedApiKey.substring(Math.max(0, trimmedApiKey.length - 4)),
   });
 
   return new ApiClientService({
     baseUrl: 'https://api.unusualwhales.com/api',
-    apiKey,
+    apiKey: trimmedApiKey, // Utiliser le token trimmé
     apiKeyHeader: 'Authorization', // Bearer token dans header Authorization
     timeout: 10000,
     retries: 2,
