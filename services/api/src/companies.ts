@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 import { z } from "zod";
 
+import { enrichCompanyFromFMP, enrichCompaniesBatch } from "./services/company-enrichment.service";
+
 const CreateCompanyInput = z.object({
   ticker: z.string().min(1).max(10),
   cik: z.string().regex(/^\d{10}$/, "CIK must be 10 digits"),
@@ -175,6 +177,31 @@ export async function getCompanyInsiderTrades(companyId: number) {
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Enrichir une entreprise depuis FMP (créer ou mettre à jour avec secteur/industrie)
+ */
+export async function enrichCompanyFromFMPAPI(ticker: string, cik?: string) {
+  return await enrichCompanyFromFMP(ticker, cik);
+}
+
+/**
+ * Enrichir plusieurs entreprises en batch depuis FMP
+ */
+export async function enrichCompaniesBatchAPI(body: unknown) {
+  const { tickers, cikMap, delayMs } = body as {
+    tickers: string[];
+    cikMap?: Record<string, string>;
+    delayMs?: number;
+  };
+
+  if (!tickers || !Array.isArray(tickers)) {
+    throw new Error("tickers array is required");
+  }
+
+  const cikMapObj = cikMap ? new Map(Object.entries(cikMap)) : undefined;
+  return await enrichCompaniesBatch(tickers, cikMapObj, delayMs);
 }
 
 

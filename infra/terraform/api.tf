@@ -201,6 +201,23 @@ resource "aws_apigatewayv2_route" "get_company_insider_trades" {
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
+# Routes d'enrichissement depuis FMP
+resource "aws_apigatewayv2_route" "post_companies_enrich" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /companies/enrich"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+resource "aws_apigatewayv2_route" "post_companies_enrich_batch" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /companies/enrich/batch"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
 # Routes Ticker Activity
 resource "aws_apigatewayv2_route" "get_ticker_quote" {
   api_id             = aws_apigatewayv2_api.http.id

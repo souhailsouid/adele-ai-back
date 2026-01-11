@@ -133,6 +133,64 @@ function calculatePortfolioImpact(
 /**
  * Récupère les secteurs pour plusieurs tickers en batch (optimisé)
  */
+/**
+ * Normalise un ticker pour la recherche (uppercase, trim, retire les espaces multiples)
+ */
+function normalizeTicker(ticker: string | null | undefined): string {
+  if (!ticker) return '';
+  return ticker.toUpperCase().trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Cherche une correspondance entre un ticker du holding et un ticker dans companies
+ * Gère les cas où "LULULEMON" doit correspondre à "LULU", "BRUKER COR" à "BRKR", etc.
+ */
+function findTickerMatch(holdingTicker: string, companiesMap: Map<string, string | null>): string | null {
+  const normalized = normalizeTicker(holdingTicker);
+  
+  // 1. Recherche exacte
+  if (companiesMap.has(normalized)) {
+    return companiesMap.get(normalized) || null;
+  }
+  
+  // 2. Extraire le premier mot du ticker (ex: "LULULEMON" -> "LULULEMON", "BRUKER COR" -> "BRUKER")
+  const firstWord = normalized.split(/\s+/)[0];
+  
+  // 3. Chercher si un ticker dans companies commence par le premier mot ou vice versa
+  for (const [companyTicker, companySector] of companiesMap.entries()) {
+    const companyFirstWord = companyTicker.split(/\s+/)[0];
+    
+    // Si le premier mot du ticker du holding commence par le ticker de la company (ex: "LULULEMON" commence par "LULU")
+    // OU si le ticker de la company commence par le premier mot du holding (ex: "LULU" commence par "LULULEMON" - peu probable)
+    if (firstWord.startsWith(companyFirstWord) || companyFirstWord.startsWith(firstWord)) {
+      // Vérifier que c'est une correspondance raisonnable (au moins 3 caractères communs)
+      const minLength = Math.min(firstWord.length, companyFirstWord.length);
+      if (minLength >= 3) {
+        return companySector;
+      }
+    }
+  }
+  
+  // 4. Recherche par inclusion (pour gérer les cas où le ticker court est dans le ticker long)
+  // Ex: "LULU" est dans "LULULEMON"
+  for (const [companyTicker, companySector] of companiesMap.entries()) {
+    const companyFirstWord = companyTicker.split(/\s+/)[0];
+    
+    // Si le ticker de la company est contenu dans le ticker du holding au début
+    if (firstWord.indexOf(companyFirstWord) === 0 || companyFirstWord.indexOf(firstWord) === 0) {
+      if (Math.min(firstWord.length, companyFirstWord.length) >= 3) {
+        return companySector;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Récupère les secteurs pour plusieurs tickers en batch (optimisé)
+ * Gère la normalisation des tickers pour faire correspondre "LULULEMON " avec "LULU", etc.
+ */
 async function getTickersSectorsBatch(tickers: string[]): Promise<Map<string, string | null>> {
   const sectorMap = new Map<string, string | null>();
   
@@ -141,29 +199,29 @@ async function getTickersSectorsBatch(tickers: string[]): Promise<Map<string, st
   // Récupérer tous les secteurs en une seule requête
   const { data: companies, error } = await supabase
     .from("companies")
-    .select("ticker, sector")
-    .in("ticker", tickers.map(t => t.toUpperCase().trim()));
+    .select("ticker, sector");
   
   if (error || !companies) {
     // Si erreur, retourner null pour tous
     for (const ticker of tickers) {
-      sectorMap.set(ticker.toUpperCase().trim(), null);
+      sectorMap.set(normalizeTicker(ticker), null);
     }
     return sectorMap;
   }
   
-  // Créer le map
+  // Créer un map de tous les tickers normalisés vers leurs secteurs
+  const companiesMap = new Map<string, string | null>();
   for (const company of companies) {
     if (company.ticker) {
-      sectorMap.set(company.ticker.toUpperCase().trim(), company.sector || null);
+      const normalized = normalizeTicker(company.ticker);
+      companiesMap.set(normalized, company.sector || null);
     }
   }
   
-  // Ajouter null pour les tickers non trouvés
+  // Chercher une correspondance pour chaque ticker (exact ou partielle)
   for (const ticker of tickers) {
-    if (!sectorMap.has(ticker.toUpperCase().trim())) {
-      sectorMap.set(ticker.toUpperCase().trim(), null);
-    }
+    const sector = findTickerMatch(ticker, companiesMap);
+    sectorMap.set(normalizeTicker(ticker), sector);
   }
   
   return sectorMap;
@@ -268,7 +326,7 @@ async function analyzeStrategicDiffsBatch(
     const oldWeights = portfolioWeightsMap.get(diff.filing_id_old) || { total: 0, tickerWeights: new Map() };
     const newWeights = portfolioWeightsMap.get(diff.filing_id_new) || { total: 0, tickerWeights: new Map() };
     
-    const tickerKey = diff.ticker?.toUpperCase().trim() || '';
+    const tickerKey = normalizeTicker(diff.ticker) || '';
     const weightOld = oldWeights.tickerWeights.get(tickerKey) || null;
     const weightNew = newWeights.tickerWeights.get(tickerKey) || null;
     

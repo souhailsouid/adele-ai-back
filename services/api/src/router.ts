@@ -26,6 +26,8 @@ import {
   getCompanyFilings,
   getCompanyEvents,
   getCompanyInsiderTrades,
+  enrichCompanyFromFMPAPI,
+  enrichCompaniesBatchAPI,
 } from "./companies";
 import {
   getTickerQuote,
@@ -783,6 +785,30 @@ const routes: Route[] = [
           const id = getPathParam(event, "id");
           if (!id) throw new Error("Missing id parameter");
           return await getCompanyInsiderTrades(parseInt(id));
+        },
+      },
+      // Enrichissement depuis FMP
+      {
+        method: "POST",
+        path: "/companies/enrich",
+        handler: async (event) => {
+          const body = parseBody(event);
+          const ticker = body?.ticker;
+          const cik = body?.cik;
+          
+          if (!ticker) {
+            throw new Error("ticker parameter is required");
+          }
+          
+          return await enrichCompanyFromFMPAPI(ticker, cik);
+        },
+      },
+      {
+        method: "POST",
+        path: "/companies/enrich/batch",
+        handler: async (event) => {
+          const body = parseBody(event);
+          return await enrichCompaniesBatchAPI(body);
         },
       },
       // Ticker Activity
