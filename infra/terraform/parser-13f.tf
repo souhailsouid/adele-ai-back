@@ -8,21 +8,21 @@ resource "aws_cloudwatch_log_group" "parser_13f" {
 
 # Lambda Function (Python)
 resource "aws_lambda_function" "parser_13f" {
-  function_name = "${var.project}-${var.stage}-parser-13f"
-  role          = aws_iam_role.parser_13f_role.arn
-  runtime       = "python3.11"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/parser-13f.zip"
+  function_name    = "${var.project}-${var.stage}-parser-13f"
+  role             = aws_iam_role.parser_13f_role.arn
+  runtime          = "python3.11"
+  handler          = "index.handler"
+  filename         = "${path.module}/../../workers/parser-13f.zip"
   source_code_hash = filebase64sha256("${path.module}/../../workers/parser-13f.zip")
-  timeout       = 900  # 15 minutes pour parsing (fichiers volumineux comme BlackRock)
+  timeout          = 900 # 15 minutes pour parsing (fichiers volumineux comme BlackRock)
   # Si timeout, SQS remet le message dans la file pour retry automatique
-  memory_size   = 1769  # 1769MB = max CPU pour parsing XML lourd (5-10x plus rapide que 512MB)
+  memory_size = 1769 # 1769MB = max CPU pour parsing XML lourd (5-10x plus rapide que 512MB)
 
   depends_on = [aws_cloudwatch_log_group.parser_13f]
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
     }
   }
@@ -40,9 +40,9 @@ resource "aws_iam_role" "parser_13f_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -103,9 +103,9 @@ resource "aws_cloudwatch_event_target" "parser_13f" {
 resource "aws_lambda_event_source_mapping" "parser_13f_sqs" {
   event_source_arn = aws_sqs_queue.parser_13f_queue.arn
   function_name    = aws_lambda_function.parser_13f.arn
-  batch_size       = 1  # Traiter 1 message à la fois (parsing lourd)
+  batch_size       = 1 # Traiter 1 message à la fois (parsing lourd)
   enabled          = true
-  
+
   # Si la Lambda expire (15 min), le message retourne dans la file pour retry
   maximum_batching_window_in_seconds = 0
 }

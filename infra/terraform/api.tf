@@ -34,8 +34,8 @@ resource "aws_lambda_function" "api" {
   handler          = "index.handler"
   filename         = "${path.module}/../../services/api/api.zip"                   # ← produit par npm run bundle
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip") # ← détecte automatiquement les changements
-  timeout          = 60  # 60s pour gérer les endpoints funds lourds (portfolio, diffs, changes)
-  memory_size      = 1536  # 1536MB = plus de CPU (proportionnel). Améliore les performances des endpoints funds lourds
+  timeout          = 60                                                            # 60s pour gérer les endpoints funds lourds (portfolio, diffs, changes)
+  memory_size      = 1536                                                          # 1536MB = plus de CPU (proportionnel). Améliore les performances des endpoints funds lourds
 
   depends_on = [aws_cloudwatch_log_group.api_lambda]
 
@@ -53,6 +53,21 @@ resource "aws_lambda_function" "api" {
       NEO4J_USERNAME         = var.neo4j_username
       NEO4J_PASSWORD         = var.neo4j_password
       NEO4J_DATABASE         = var.neo4j_database
+      # Athena & S3 Data Lake (Extreme Budget Architecture)
+      USE_ATHENA            = "true"  # Activer Athena pour les lectures (OBLIGATOIRE)
+      USE_S3_WRITES         = "true"  # Activer S3 pour les écritures (OBLIGATOIRE - migration complète)
+      ATHENA_DATABASE       = aws_athena_database.main.name
+      ATHENA_WORK_GROUP     = aws_athena_workgroup.main.name
+      ATHENA_WORKGROUP      = aws_athena_workgroup.main.name  # Alias pour compatibilité
+      ATHENA_RESULTS_BUCKET = aws_s3_bucket.athena_results.bucket
+      S3_DATA_LAKE_BUCKET   = aws_s3_bucket.data_lake.bucket
+      S3_DATA_BUCKET        = aws_s3_bucket.data_lake.bucket  # Alias pour compatibilité
+      INSIDERS_CACHE_TABLE  = aws_dynamodb_table.insiders_cache.name
+      # Alertes Top Signals (Telegram/Discord)
+      TELEGRAM_BOT_TOKEN    = var.telegram_bot_token
+      TELEGRAM_CHAT_ID      = var.telegram_chat_id
+      DISCORD_WEBHOOK_URL   = var.discord_webhook_url
+      # Note: AWS_REGION est automatiquement disponible dans Lambda via le contexte d'exécution
     }
   }
 
@@ -69,8 +84,8 @@ resource "aws_lambda_function" "api" {
 # Configuration des retries pour gérer les throttles temporaires (GRATUIT)
 resource "aws_lambda_function_event_invoke_config" "api" {
   function_name = aws_lambda_function.api.function_name
-  
-  maximum_retry_attempts = 2
+
+  maximum_retry_attempts       = 2
   maximum_event_age_in_seconds = 21600
 }
 
@@ -83,7 +98,7 @@ resource "aws_apigatewayv2_integration" "api_lambda" {
   payload_format_version = "2.0"
   # API Gateway v2 limite max: 30000ms (30s). La Lambda a 60s pour gérer les endpoints lourds.
   # Si la Lambda prend > 30s, l'API Gateway retournera 504, mais la Lambda continuera.
-  timeout_milliseconds   = 30000
+  timeout_milliseconds = 30000
 
   depends_on = [aws_lambda_permission.api_invoke]
 }

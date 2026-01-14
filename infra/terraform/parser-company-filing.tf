@@ -13,14 +13,14 @@ resource "aws_lambda_function" "parser_company_filing" {
   runtime       = "python3.11"
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/parser-company-filing.zip"
-  timeout       = 300  # 5 minutes pour parsing
+  timeout       = 300 # 5 minutes pour parsing
   memory_size   = 512
 
   depends_on = [aws_cloudwatch_log_group.parser_company_filing]
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
     }
   }
@@ -32,9 +32,9 @@ resource "aws_iam_role" "parser_company_filing_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }

@@ -15,16 +15,16 @@ resource "aws_lambda_function" "collector_sec_watcher" {
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/collector-sec-watcher/collector-sec-watcher.zip"
   timeout       = 300
-  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
+  memory_size   = 1024 # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_sec_watcher]
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
-      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
+      EVENT_BUS_NAME       = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE       = "sec-watcher" # Pour identifier le type de collector dans SQS
     }
   }
 }
@@ -48,7 +48,7 @@ resource "aws_cloudwatch_event_target" "collector_sec_watcher" {
 resource "aws_lambda_event_source_mapping" "collector_sec_watcher_sqs" {
   event_source_arn = aws_sqs_queue.collectors_queue.arn
   function_name    = aws_lambda_function.collector_sec_watcher.arn
-  batch_size       = 1  # Traiter 1 message à la fois pour éviter la surcharge
+  batch_size       = 1 # Traiter 1 message à la fois pour éviter la surcharge
   enabled          = true
 }
 
@@ -61,23 +61,23 @@ resource "aws_cloudwatch_log_group" "collector_rss" {
 }
 
 resource "aws_lambda_function" "collector_rss" {
-  function_name = "${var.project}-${var.stage}-collector-rss"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/collector-rss/collector-rss.zip"
+  function_name    = "${var.project}-${var.stage}-collector-rss"
+  role             = aws_iam_role.collector_role.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = "${path.module}/../../workers/collector-rss/collector-rss.zip"
   source_code_hash = filebase64sha256("${path.module}/../../workers/collector-rss/collector-rss.zip")
-  timeout       = 300
-  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
+  timeout          = 300
+  memory_size      = 1024 # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_rss]
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
-      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
+      EVENT_BUS_NAME       = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE       = "sec-watcher" # Pour identifier le type de collector dans SQS
     }
   }
 }
@@ -101,7 +101,7 @@ resource "aws_cloudwatch_event_target" "collector_rss" {
 resource "aws_lambda_event_source_mapping" "collector_rss_sqs" {
   event_source_arn = aws_sqs_queue.collectors_queue.arn
   function_name    = aws_lambda_function.collector_rss.arn
-  batch_size       = 1  # Traiter 1 message à la fois
+  batch_size       = 1 # Traiter 1 message à la fois
   enabled          = true
 }
 
@@ -224,16 +224,16 @@ resource "aws_lambda_function" "collector_sec_company_filings" {
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/collector-sec-company-filings/collector-sec-company-filings.zip"
   timeout       = 300
-  memory_size   = 1024  # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
+  memory_size   = 1024 # 1024MB = plus de CPU pour parsing XML EDGAR (5-10x plus rapide)
 
   depends_on = [aws_cloudwatch_log_group.collector_sec_company_filings]
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
-      COLLECTOR_TYPE      = "sec-watcher"  # Pour identifier le type de collector dans SQS
+      EVENT_BUS_NAME       = aws_cloudwatch_event_bus.signals.name
+      COLLECTOR_TYPE       = "sec-watcher" # Pour identifier le type de collector dans SQS
     }
   }
 }
@@ -256,7 +256,7 @@ resource "aws_cloudwatch_event_target" "collector_sec_company_filings" {
 resource "aws_lambda_event_source_mapping" "collector_sec_company_filings_sqs" {
   event_source_arn = aws_sqs_queue.collectors_queue.arn
   function_name    = aws_lambda_function.collector_sec_company_filings.arn
-  batch_size       = 1  # Traiter 1 message à la fois
+  batch_size       = 1 # Traiter 1 message à la fois
   enabled          = true
 }
 
@@ -320,9 +320,9 @@ resource "aws_iam_role" "collector_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }

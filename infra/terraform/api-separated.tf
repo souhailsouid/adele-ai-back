@@ -18,7 +18,7 @@ resource "aws_lambda_function" "api_fast" {
   filename         = "${path.module}/../../services/api/api.zip"
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip")
   timeout          = 10  # 10s pour routes rapides
-  memory_size      = 256  # Moins de mémoire = moins cher
+  memory_size      = 256 # Moins de mémoire = moins cher
 
   depends_on = [aws_cloudwatch_log_group.api_fast]
 
@@ -64,8 +64,8 @@ resource "aws_lambda_function" "api_ai_heavy" {
   handler          = "handlers/api-ai-heavy.handler"
   filename         = "${path.module}/../../services/api/api.zip"
   source_code_hash = filebase64sha256("${path.module}/../../services/api/api.zip")
-  timeout          = 30  # 30s pour routes lourdes
-  memory_size      = 1024  # Plus de mémoire = CPU plus rapide
+  timeout          = 30   # 30s pour routes lourdes
+  memory_size      = 1024 # Plus de mémoire = CPU plus rapide
 
   depends_on = [aws_cloudwatch_log_group.api_ai_heavy]
 

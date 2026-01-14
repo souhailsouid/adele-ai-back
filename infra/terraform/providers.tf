@@ -7,11 +7,11 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "personamy-dev-tf-state-956633302249"
-    key    = "adel-ai-backend/terraform.tfstate"  # Nouvelle clé pour isoler ADEL AI
-    region = "eu-west-3"
+    bucket         = "personamy-dev-tf-state-956633302249"
+    key            = "adel-ai-backend/terraform.tfstate" # Nouvelle clé pour isoler ADEL AI
+    region         = "eu-west-3"
     dynamodb_table = "personamy-dev-tf-locks"
-    encrypt = true
+    encrypt        = true
   }
 }
 

@@ -32,7 +32,7 @@ resource "aws_apigatewayv2_integration" "api_data_lambda" {
   payload_format_version = "2.0"
   # API Gateway v2 limite max: 30000ms (30s). La Lambda a 60s pour gérer les endpoints lourds.
   # Si la Lambda prend > 30s, l'API Gateway retournera 504, mais la Lambda continuera.
-  timeout_milliseconds   = 30000
+  timeout_milliseconds = 30000
 
   depends_on = [aws_lambda_permission.api_data_invoke]
 }

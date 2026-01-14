@@ -6,14 +6,14 @@ resource "aws_cloudwatch_log_group" "filing_retry_handler" {
 }
 
 resource "aws_lambda_function" "filing_retry_handler" {
-  function_name = "${var.project}-${var.stage}-filing-retry-handler"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/filing-retry-handler/filing-retry-handler.zip"
+  function_name    = "${var.project}-${var.stage}-filing-retry-handler"
+  role             = aws_iam_role.collector_role.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = "${path.module}/../../workers/filing-retry-handler/filing-retry-handler.zip"
   source_code_hash = filebase64sha256("${path.module}/../../workers/filing-retry-handler/filing-retry-handler.zip")
-  timeout       = 300
-  memory_size   = 512
+  timeout          = 300
+  memory_size      = 512
 
   depends_on = [aws_cloudwatch_log_group.filing_retry_handler]
 
@@ -21,7 +21,7 @@ resource "aws_lambda_function" "filing_retry_handler" {
     variables = {
       SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
-      EVENT_BUS_NAME      = aws_cloudwatch_event_bus.signals.name
+      EVENT_BUS_NAME       = aws_cloudwatch_event_bus.signals.name
     }
   }
 }

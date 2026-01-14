@@ -18,9 +18,9 @@ resource "aws_lambda_function" "processor_ia" {
 
   environment {
     variables = {
-      SUPABASE_URL        = var.supabase_url
+      SUPABASE_URL         = var.supabase_url
       SUPABASE_SERVICE_KEY = var.supabase_service_key
-      OPENAI_API_KEY      = var.openai_api_key
+      OPENAI_API_KEY       = var.openai_api_key
     }
   }
 }
@@ -30,9 +30,9 @@ resource "aws_iam_role" "processor_ia_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }

@@ -30,7 +30,7 @@ resource "aws_apigatewayv2_route" "get_funds_changes" {
 
 resource "aws_apigatewayv2_route" "get_fund" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}"
+  route_key          = "GET /funds/{cik}"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -38,7 +38,7 @@ resource "aws_apigatewayv2_route" "get_fund" {
 
 resource "aws_apigatewayv2_route" "get_fund_holdings" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/holdings"
+  route_key          = "GET /funds/{cik}/holdings"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -46,16 +46,16 @@ resource "aws_apigatewayv2_route" "get_fund_holdings" {
 
 resource "aws_apigatewayv2_route" "get_fund_filings" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/filings"
+  route_key          = "GET /funds/{cik}/filings"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
 }
 
-# Route pour obtenir un filing spécifique (doit être avant /funds/{id}/filings pour éviter les conflits)
+# Route pour obtenir un filing spécifique (doit être avant /funds/{cik}/filings pour éviter les conflits)
 resource "aws_apigatewayv2_route" "get_fund_filing" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/filings/{filingId}"
+  route_key          = "GET /funds/{cik}/filings/{filingId}"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -64,7 +64,7 @@ resource "aws_apigatewayv2_route" "get_fund_filing" {
 # Route pour obtenir les holdings d'un filing spécifique
 resource "aws_apigatewayv2_route" "get_filing_holdings" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/filings/{filingId}/holdings"
+  route_key          = "GET /funds/{cik}/filings/{filingId}/holdings"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -72,7 +72,7 @@ resource "aws_apigatewayv2_route" "get_filing_holdings" {
 
 resource "aws_apigatewayv2_route" "get_fund_diffs" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/diffs"
+  route_key          = "GET /funds/{cik}/diffs"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -80,7 +80,7 @@ resource "aws_apigatewayv2_route" "get_fund_diffs" {
 
 resource "aws_apigatewayv2_route" "get_fund_ticker_diffs" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/diffs/{ticker}"
+  route_key          = "GET /funds/{cik}/diffs/{ticker}"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -89,7 +89,7 @@ resource "aws_apigatewayv2_route" "get_fund_ticker_diffs" {
 # Route pour l'analyse stratégique des diffs (avec détection des tendances multi-trimestres)
 resource "aws_apigatewayv2_route" "get_fund_diffs_strategic" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/diffs/strategic"
+  route_key          = "GET /funds/{cik}/diffs/strategic"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -97,7 +97,7 @@ resource "aws_apigatewayv2_route" "get_fund_diffs_strategic" {
 
 resource "aws_apigatewayv2_route" "get_fund_changes" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/changes"
+  route_key          = "GET /funds/{cik}/changes"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -105,7 +105,7 @@ resource "aws_apigatewayv2_route" "get_fund_changes" {
 
 resource "aws_apigatewayv2_route" "get_fund_portfolio" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/portfolio"
+  route_key          = "GET /funds/{cik}/portfolio"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -113,7 +113,7 @@ resource "aws_apigatewayv2_route" "get_fund_portfolio" {
 
 resource "aws_apigatewayv2_route" "post_fund_calculate_diff" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "POST /funds/{id}/filings/{filingId}/calculate-diff"
+  route_key          = "POST /funds/{cik}/filings/{filingId}/calculate-diff"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -121,7 +121,7 @@ resource "aws_apigatewayv2_route" "post_fund_calculate_diff" {
 
 resource "aws_apigatewayv2_route" "post_fund_filing_retry" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "POST /funds/{id}/filings/{filingId}/retry"
+  route_key          = "POST /funds/{cik}/filings/{filingId}/retry"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -129,7 +129,7 @@ resource "aws_apigatewayv2_route" "post_fund_filing_retry" {
 
 resource "aws_apigatewayv2_route" "post_fund_filings_retry_all" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "POST /funds/{id}/filings/retry-all"
+  route_key          = "POST /funds/{cik}/filings/retry-all"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -138,7 +138,7 @@ resource "aws_apigatewayv2_route" "post_fund_filings_retry_all" {
 # Routes Fund CIKs (gestion des CIK multiples)
 resource "aws_apigatewayv2_route" "get_fund_ciks" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/ciks"
+  route_key          = "GET /funds/{cik}/ciks"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -146,7 +146,7 @@ resource "aws_apigatewayv2_route" "get_fund_ciks" {
 
 resource "aws_apigatewayv2_route" "post_fund_cik" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "POST /funds/{id}/ciks"
+  route_key          = "POST /funds/{cik}/ciks"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -154,7 +154,7 @@ resource "aws_apigatewayv2_route" "post_fund_cik" {
 
 resource "aws_apigatewayv2_route" "delete_fund_cik" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "DELETE /funds/{id}/ciks/{cik}"
+  route_key          = "DELETE /funds/{cik}/ciks/{cikToRemove}"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -163,7 +163,7 @@ resource "aws_apigatewayv2_route" "delete_fund_cik" {
 # Routes Fund Notifications
 resource "aws_apigatewayv2_route" "get_fund_notification_preferences" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/notifications/preferences"
+  route_key          = "GET /funds/{cik}/notifications/preferences"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -171,7 +171,7 @@ resource "aws_apigatewayv2_route" "get_fund_notification_preferences" {
 
 resource "aws_apigatewayv2_route" "put_fund_notification_preferences" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "PUT /funds/{id}/notifications/preferences"
+  route_key          = "PUT /funds/{cik}/notifications/preferences"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -221,7 +221,7 @@ resource "aws_apigatewayv2_route" "get_notifications_accumulations" {
 # Route Transparency Mode
 resource "aws_apigatewayv2_route" "get_fund_transparency" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "GET /funds/{id}/transparency"
+  route_key          = "GET /funds/{cik}/transparency"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id
@@ -239,7 +239,7 @@ resource "aws_apigatewayv2_route" "get_sec_calendar" {
 # Route pour déclencher manuellement la découverte de filings pour tous les CIK
 resource "aws_apigatewayv2_route" "post_fund_discover" {
   api_id             = aws_apigatewayv2_api.http_data.id
-  route_key          = "POST /funds/{id}/discover"
+  route_key          = "POST /funds/{cik}/discover"
   target             = "integrations/${aws_apigatewayv2_integration.api_data_lambda.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_data.id

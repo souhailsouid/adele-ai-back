@@ -1,7 +1,7 @@
 resource "aws_cognito_user_pool" "this" {
   name = "${var.project}-${var.stage}-user-pool"
 
-  username_attributes = ["email"]
+  username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
   schema {
@@ -13,11 +13,11 @@ resource "aws_cognito_user_pool" "this" {
 
   # Politique de mot de passe
   password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_uppercase = true
-    require_numbers   = true
-    require_symbols   = true
+    minimum_length                   = 8
+    require_lowercase                = true
+    require_uppercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
     temporary_password_validity_days = 7
   }
 
@@ -31,7 +31,7 @@ resource "aws_cognito_user_pool_client" "web" {
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
   allowed_oauth_flows_user_pool_client = true
-  generate_secret                      = false  # important pour app web
+  generate_secret                      = false # important pour app web
 
   # Autoriser USER_PASSWORD_AUTH pour la connexion directe
   explicit_auth_flows = [

@@ -6,14 +6,14 @@ resource "aws_cloudwatch_log_group" "notification_generator" {
 }
 
 resource "aws_lambda_function" "notification_generator" {
-  function_name = "${var.project}-${var.stage}-notification-generator"
-  role          = aws_iam_role.collector_role.arn
-  runtime       = "nodejs20.x"
-  handler       = "index.handler"
-  filename      = "${path.module}/../../workers/notification-generator/notification-generator.zip"
+  function_name    = "${var.project}-${var.stage}-notification-generator"
+  role             = aws_iam_role.collector_role.arn
+  runtime          = "nodejs20.x"
+  handler          = "index.handler"
+  filename         = "${path.module}/../../workers/notification-generator/notification-generator.zip"
   source_code_hash = filebase64sha256("${path.module}/../../workers/notification-generator/notification-generator.zip")
-  timeout       = 300
-  memory_size   = 512
+  timeout          = 300
+  memory_size      = 512
 
   depends_on = [aws_cloudwatch_log_group.notification_generator]
 
@@ -44,6 +44,6 @@ resource "aws_cloudwatch_event_target" "notification_generator" {
 resource "aws_lambda_event_source_mapping" "notification_generator_sqs" {
   event_source_arn = aws_sqs_queue.collectors_queue.arn
   function_name    = aws_lambda_function.notification_generator.arn
-  batch_size       = 1  # Traiter 1 message à la fois
+  batch_size       = 1 # Traiter 1 message à la fois
   enabled          = true
 }

@@ -34,7 +34,7 @@ resource "aws_cloudwatch_event_rule" "alert_sender_cron" {
   name                = "${var.project}-${var.stage}-alert-sender-cron"
   description         = "Déclenche le alert-sender toutes les minutes pour traiter les alertes"
   schedule_expression = "rate(1 minute)"
-  state               = "DISABLED"  # Désactivé
+  state               = "DISABLED" # Désactivé
 }
 
 resource "aws_cloudwatch_event_target" "alert_sender" {

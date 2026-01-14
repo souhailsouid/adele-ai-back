@@ -11,7 +11,7 @@ resource "aws_cloudwatch_event_rule" "processor_ia_trigger" {
   name           = "${var.project}-${var.stage}-processor-ia-trigger"
   event_bus_name = aws_cloudwatch_event_bus.signals.name
   description    = "Déclenche le processor IA pour nouveaux signaux"
-  state          = "DISABLED"  # Désactivé
+  state          = "DISABLED" # Désactivé
 
   event_pattern = jsonencode({
     source      = ["adel.signals"]
@@ -25,7 +25,7 @@ resource "aws_cloudwatch_event_rule" "diff_13f_trigger" {
   name           = "${var.project}-${var.stage}-diff-13f-trigger"
   event_bus_name = aws_cloudwatch_event_bus.signals.name
   description    = "Déclenche le diff engine après parsing 13F"
-  state          = "DISABLED"  # Désactivé - obsolète
+  state          = "DISABLED" # Désactivé - obsolète
 
   event_pattern = jsonencode({
     source      = ["adel.signals"]

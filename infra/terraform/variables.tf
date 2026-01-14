@@ -7,8 +7,8 @@ variable "stage" {
 }
 
 variable "region" {
-  type        = string
-  default     = "eu-west-3"
+  type    = string
+  default = "eu-west-3"
 }
 
 variable "frontend_allowed_origins" {
