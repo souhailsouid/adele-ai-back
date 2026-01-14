@@ -2,7 +2,7 @@ import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { supabase } from "./supabase";
 import { getSignals, createSignal, getSignal, searchSignals } from "./signals";
 import { chatWithData } from "./chat";
-import { createFund, getFunds, getFund, getFundHoldings, getFundFilings, getFundFiling, getFilingHoldings, getFundDiffs, getFundTickerDiffs, getFundRecentChanges, getAllFundsRecentChanges, discoverAllFundFilings, retryFilingParsing, retryAllFundFilings, getTickerFundsChanges, getMarketPulse, getPulseFeed, analyzeFundDiffsStrategically } from "./funds";
+import { createFund, getFunds, getFund, getFundByCik, resolveFundId, getFundHoldings, getFundFilings, getFundFiling, getFilingHoldings, getFundDiffs, getFundTickerDiffs, getFundRecentChanges, getAllFundsRecentChanges, discoverAllFundFilings, retryFilingParsing, retryAllFundFilings, getTickerFundsChanges, getMarketPulse, getPulseFeed, analyzeFundDiffsStrategically } from "./funds";
 import { getFundCiks, addFundCik, removeFundCik, getAllFundCiks } from "./services/fund-ciks.service";
 import {
   upsertNotificationPreferences,
@@ -61,6 +61,7 @@ import { convergenceRiskRoutes } from "./routes/convergence-risk.routes";
 import { earningsHubRoutes } from "./routes/earnings-hub.routes";
 import { catalystCalendarRoutes } from "./routes/catalyst-calendar.routes";
 import { upcomingEarningsRoutes } from "./routes/upcoming-earnings.routes";
+import { insidersRoutes } from "./routes/insiders.routes";
 import { getCombinedEconomicCalendar } from "./economic-calendar";
 import { getLatest13FFilings } from "./13f-filings";
 import type { NotificationType } from "./types/unusual-whales/alerts";
@@ -276,21 +277,28 @@ const routes: Route[] = [
   },
   {
     method: "GET",
-    path: "/funds/{id}",
+    path: "/funds/{cik}",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
-      return await getFund(parseInt(id));
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fund = await getFundByCik(cik);
+      if (!fund) {
+        const error = new Error(`Fund with CIK ${cik} not found`);
+        (error as any).statusCode = 404;
+        throw error;
+      }
+      return fund;
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/holdings",
+    path: "/funds/{cik}/holdings",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fundId = await resolveFundId(cik);
       const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 100;
-      return await getFundHoldings(parseInt(id), limit);
+      return await getFundHoldings(fundId, limit);
     },
   },
       {
@@ -316,12 +324,13 @@ const routes: Route[] = [
       },
       {
         method: "GET",
-        path: "/funds/{id}/filings",
+        path: "/funds/{cik}/filings",
         handler: async (event) => {
-          const id = getPathParam(event, "id");
-          if (!id) throw new Error("Missing id parameter");
+          const cik = getPathParam(event, "cik");
+          if (!cik) throw new Error("Missing cik parameter");
+          const fundId = await resolveFundId(cik);
           const formType = getQueryParam(event, "form_type");
-          const data = await getFundFilings(parseInt(id));
+          const data = await getFundFilings(fundId);
           // Filtrer par form_type si fourni
           if (formType && data) {
             return data.filter((f: any) => f.form_type === formType);
@@ -331,10 +340,11 @@ const routes: Route[] = [
       },
       {
         method: "GET",
-        path: "/funds/{id}/diffs",
+        path: "/funds/{cik}/diffs",
         handler: async (event) => {
-          const id = getPathParam(event, "id");
-          if (!id) throw new Error("Missing id parameter");
+          const cik = getPathParam(event, "cik");
+          if (!cik) throw new Error("Missing cik parameter");
+          const fundId = await resolveFundId(cik);
           const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 50;
           
           // Options de comparaison par dates/périodes
@@ -366,7 +376,7 @@ const routes: Route[] = [
             options.ticker = event.queryStringParameters.ticker;
           }
 
-          return await getFundDiffs(parseInt(id), limit, Object.keys(options).length > 0 ? options : undefined);
+          return await getFundDiffs(fundId, limit, Object.keys(options).length > 0 ? options : undefined);
         },
       },
       {
@@ -755,7 +765,13 @@ const routes: Route[] = [
         handler: async (event) => {
           const ticker = getPathParam(event, "ticker");
           if (!ticker) throw new Error("Missing ticker parameter");
-          return await getCompanyByTicker(ticker);
+          const company = await getCompanyByTicker(ticker);
+          if (!company) {
+            const error: any = new Error(`Company with ticker ${ticker.toUpperCase()} not found`);
+            error.statusCode = 404;
+            throw error;
+          }
+          return company;
         },
       },
       {
@@ -1025,6 +1041,8 @@ const routes: Route[] = [
       ...catalystCalendarRoutes,
       // ========== Upcoming Earnings Routes ==========
       ...upcomingEarningsRoutes,
+      // ========== Insiders Routes ==========
+      ...insidersRoutes,
       // ========== Unusual Whales API Routes ==========
       {
         method: "GET",

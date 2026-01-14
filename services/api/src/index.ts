@@ -89,11 +89,19 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     console.error("Error message:", e?.message);
     console.error("Error stack:", e?.stack);
 
-    // Retourner 500 pour les erreurs serveur, 400 pour les erreurs client
-    const statusCode =
-      e?.name === "ZodError" || e?.message?.includes("validation") || e?.message?.includes("required")
-        ? 400
-        : 500;
+    // Utiliser le statusCode de l'erreur si présent, sinon déterminer selon le type
+    let statusCode = e?.statusCode || e?.status;
+    
+    if (!statusCode) {
+      // Retourner 500 pour les erreurs serveur, 400 pour les erreurs client, 404 pour not found
+      if (e?.name === "ZodError" || e?.message?.includes("validation") || e?.message?.includes("required")) {
+        statusCode = 400;
+      } else if (e?.message?.includes("not found") || e?.code === "PGRST116") {
+        statusCode = 404;
+      } else {
+        statusCode = 500;
+      }
+    }
 
     return {
       statusCode,

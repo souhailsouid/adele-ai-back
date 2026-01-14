@@ -36,9 +36,17 @@ Tu es un développeur Senior Fullstack expert en TypeScript, Next.js (App Router
 # BACKEND MONITORING & ADMIN RULES
 
 ## Tech Stack & Context
-- **Database:** Supabase (PostgreSQL) accessed via `supabase-js` (NO Prisma).
+- **Database:** **S3 + Athena (Extreme Budget Architecture)** - BANNIR les bases de données relationnelles coûteuses (RDS, Aurora, Supabase).
+- **Data Storage:** Toutes les données volumineuses (holdings, filings) doivent être stockées en Parquet sur S3.
+- **Query Engine:** Amazon Athena pour toutes les requêtes analytiques (corrélation, agrégations, jointures).
 - **Execution:** Serverless Lambdas / Edge Functions.
 - **Goal:** Full observability of background jobs (13F parsing, 10K/10Q parsing, CRONs) for admin dashboard.
+
+## ⚠️ RÈGLE CRITIQUE: Bannir les DB Relationnelles Coûteuses
+- **INTERDIT:** Utiliser RDS, Aurora, Supabase, ou toute base de données relationnelle payante pour les données volumineuses.
+- **OBLIGATOIRE:** Utiliser S3 (Parquet) + Athena pour toutes les données analytiques (holdings, filings, diffs).
+- **EXCEPTION:** Seulement pour les métadonnées légères (< 10K rows), on peut utiliser DynamoDB (PAY_PER_REQUEST).
+- **Pattern:** Toutes les nouvelles données doivent être écrites directement en Parquet sur S3, jamais dans une DB relationnelle.
 
 ## Database Schema Standards (Supabase)
 Always use these monitoring tables. Write code that interacts with them for ALL background tasks.
@@ -103,23 +111,81 @@ Always use these monitoring tables. Write code that interacts with them for ALL 
 - If `retry_count < max_retries`: Schedule retry (via SQS delay or EventBridge schedule)
 - If `retry_count >= max_retries`: Mark as permanently failed
 
-### 2. Supabase Admin Client
-For ALL backend admin operations (queue, cron registry), ALWAYS use the Service Role Key client to bypass RLS.
+### 2. Data Storage Pattern (S3 + Athena)
+For ALL data storage operations, use S3 Parquet + Athena instead of relational databases.
 
 **Import pattern:**
 ```typescript
-import { createAdminClient } from '@/utils/supabase/admin';
-// or in workers:
-import { createAdminClient } from '../utils/supabase/admin';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { AthenaClient, StartQueryExecutionCommand } from '@aws-sdk/client-athena';
 ```
 
-**Usage:**
+**Writing data (Parquet to S3):**
 ```typescript
-const adminClient = createAdminClient();
-const { data, error } = await adminClient
-  .from('file_processing_queue')
-  .insert({ ... });
+// Convert data to Parquet and upload to S3
+const parquetBuffer = await convertToParquet(data, schema);
+await s3Client.send(new PutObjectCommand({
+  Bucket: 'data-lake-bucket',
+  Key: `data/${tableName}/year=${year}/month=${month}/data.parquet`,
+  Body: parquetBuffer,
+}));
 ```
+
+**Reading data - Performance & Cost Optimization:**
+
+**⚠️ CRITICAL: Athena Optimization Rules**
+
+1. **Small Lookups (1 row by ID)**: Use S3 direct read, NOT Athena
+   - Athena has a 10MB minimum billing per query
+   - For `getCompany(id)` or `getFund(id)`, use `findRowByIdInS3Parquet()` from `@/athena/s3-direct-read`
+   - Faster AND cheaper than Athena for single-row lookups
+
+2. **Cache for Frequent Queries**: Use Lambda cache for repeated queries
+   - For small tables (< 10K rows) that change rarely (companies, funds)
+   - Use `withCache()` from `@/athena/cache` with 5-minute TTL
+   - Example: `getCompanyByTicker('AAPL')` should be cached if called multiple times
+
+3. **Athena for Analytical Queries Only**:
+   - Use Athena for: aggregations, JOINs, GROUP BY, filtering large datasets
+   - DON'T use Athena for: single-row lookups, small tables (< 100 rows)
+
+**Examples:**
+
+```typescript
+// ❌ BAD: Athena for single row lookup (wastes 10MB minimum)
+const company = await executeAthenaQuery(`SELECT * FROM companies WHERE id = ${id} LIMIT 1`);
+
+// ✅ GOOD: S3 direct read for single row
+import { findRowByIdInS3Parquet } from '@/athena/s3-direct-read';
+const company = await findRowByIdInS3Parquet('companies', id);
+
+// ✅ GOOD: Cache for frequent lookups
+import { withCache, CacheKeys } from '@/athena/cache';
+const company = await withCache(
+  CacheKeys.companyByTicker(ticker),
+  () => getCompanyByTickerAthena(ticker),
+  5 * 60 * 1000 // 5 minutes
+);
+
+// ✅ GOOD: Athena for analytical queries
+const results = await executeAthenaQuery(`
+  SELECT ticker, SUM(market_value) as total_value
+  FROM fund_holdings
+  WHERE fund_id = ${fundId}
+  GROUP BY ticker
+`);
+```
+
+4. **Batch Processing**: Group Athena queries when possible
+   - Instead of 10 separate queries, use 1 query with WHERE IN or UNION
+
+5. **Parquet Only**: Never use CSV for tables > 10K rows
+   - Parquet is columnar and much more efficient for Athena
+
+**Legacy Supabase (migration in progress):**
+- Only use Supabase for reading existing data during migration.
+- All new data must go to S3 Parquet.
+- Gradually migrate existing tables using `scripts/migrate_to_s3_parquet.ts`.
 
 ### 3. CRON Jobs Pattern
 **MANDATORY** for every CRON function:

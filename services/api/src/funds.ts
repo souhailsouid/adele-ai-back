@@ -4,6 +4,11 @@ import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge
 import { determineFormType, isRelevantFormType } from "./services/sec-filter.service";
 import { getAllFundCiks } from "./services/fund-ciks.service";
 import { getTickerFundsChanges, getMarketPulse, getPulseFeed } from "./services/market-pulse.service";
+import { getFundByIdAthena, getFundsAthena, getFundByCikAthena } from "./athena/funds";
+import { getFundFilingsAthena, getFundFilingByIdAthena } from "./athena/fund_filings";
+import { getFundDiffsAthena } from "./athena/fund_holdings_diff";
+import { getAllFundsRecentChangesAthena } from "./athena/market_pulse";
+import { insertRowS3 } from "./athena/write";
 
 export { getTickerFundsChanges, getMarketPulse, getPulseFeed };
 export { analyzeFundDiffsStrategically } from "./services/fund-strategic-analysis.service";
@@ -36,37 +41,41 @@ export async function createFund(body: unknown) {
   // Validation
   const input = CreateFundInput.parse(body);
   console.log("[DEBUG] Input validated:", input);
-  
-  // Vérifier si le fond existe déjà
-  const { data: existing, error: checkError } = await supabase
-    .from("funds")
-    .select("id")
-    .eq("cik", input.cik)
-    .single();
 
-  if (checkError && checkError.code !== "PGRST116") {
-    throw checkError;
+  // Architecture Extreme Budget: Athena/S3 uniquement, pas de Supabase
+  if (process.env.USE_ATHENA !== 'true' && process.env.USE_ATHENA !== '1') {
+    throw new Error('USE_ATHENA must be enabled. Supabase is no longer supported.');
+  }
+  if (process.env.USE_S3_WRITES !== 'true' && process.env.USE_S3_WRITES !== '1') {
+    throw new Error('USE_S3_WRITES must be enabled. Supabase is no longer supported.');
   }
 
+  // Vérifier si le fond existe déjà (Athena uniquement)
+  const existing = await getFundByCikAthena(input.cik);
   if (existing) {
     throw new Error(`Fund with CIK ${input.cik} already exists`);
   }
 
-  // Créer le fond
-  const { data: fund, error: insertError } = await supabase
-    .from("funds")
-    .insert({
-      name: input.name,
-      cik: input.cik,
-      tier_influence: input.tier_influence,
-      category: input.category,
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    throw insertError;
-  }
+  // Créer le fund dans S3
+  console.log("[S3 Write] Inserting fund directly to S3...");
+  const newFundData = {
+    name: input.name,
+    cik: input.cik,
+    tier_influence: input.tier_influence,
+    category: input.category,
+    created_at: new Date().toISOString(),
+  };
+  
+  const insertedFund = await insertRowS3('funds', newFundData);
+  const fund: Fund = {
+    id: insertedFund.id,
+    name: input.name,
+    cik: input.cik,
+    tier_influence: input.tier_influence,
+    category: input.category,
+    created_at: newFundData.created_at,
+  };
+  console.log(`[S3 Write] Fund created on S3: ${fund.name} (CIK: ${fund.cik}, ID: ${fund.id})`);
 
   console.log(`[SUCCESS] Fund created: ${fund.name} (CIK: ${fund.cik})`);
 
@@ -445,20 +454,31 @@ async function discoverFilings(fundId: number, cik: string) {
     const formType = detectedFormType;
 
     // Insérer le filing avec le CIK (important pour les requêtes directes par CIK)
-    const { data: filing, error: insertError } = await supabase
-      .from("fund_filings")
-      .insert({
-        fund_id: fundId,
-        cik: cik, // Toujours inclure le CIK pour permettre les requêtes directes
-        accession_number: accessionNumber,
-        form_type: formType,
-        filing_date: extractDate(entry.updated),
-        status: "DISCOVERED",
-      })
-      .select()
-      .single();
+    // Architecture Extreme Budget: S3 uniquement, pas de Supabase
+    if (process.env.USE_S3_WRITES !== 'true' && process.env.USE_S3_WRITES !== '1') {
+      throw new Error('USE_S3_WRITES must be enabled. Supabase is no longer supported.');
+    }
 
-    if (insertError) throw insertError;
+    // Créer le filing dans S3
+    console.log(`[S3 Write] Inserting filing ${accessionNumber} directly to S3...`);
+    const insertedFiling = await insertRowS3('fund_filings', {
+      fund_id: fundId,
+      cik: cik,
+      accession_number: accessionNumber,
+      form_type: formType,
+      filing_date: extractDate(entry.updated),
+      status: "DISCOVERED",
+    });
+    const filing = {
+      id: insertedFiling.id,
+      fund_id: fundId,
+      cik: cik,
+      accession_number: accessionNumber,
+      form_type: formType,
+      filing_date: extractDate(entry.updated),
+      status: "DISCOVERED",
+    };
+    console.log(`[S3 Write] Filing created on S3: ${accessionNumber} (ID: ${filing.id})`);
 
     discoveredFilings.push(filing);
 
@@ -523,7 +543,31 @@ export async function parseFiling(filingId: number, fundId: number, cik: string,
 /**
  * Lister tous les fonds
  */
+/**
+ * Lister tous les funds
+ * 
+ * Architecture Extreme Budget: Utilise Athena pour les lectures
+ */
 export async function getFunds() {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const funds = await getFundsAthena(100);
+      // Trier par tier_influence puis created_at (comme Supabase)
+      return funds.sort((a, b) => {
+        if (b.tier_influence !== a.tier_influence) {
+          return b.tier_influence - a.tier_influence;
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    } catch (error: any) {
+      console.error('[Athena] Error fetching funds:', error.message);
+      throw error;
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   console.log("[getFunds] Starting query to Supabase");
   console.log("[getFunds] Supabase client:", supabase ? "initialized" : "NOT INITIALIZED");
   
@@ -559,17 +603,58 @@ export async function getFunds() {
 }
 
 /**
+ * Helper: Résoudre un CIK ou ID en fund ID
+ * Supporte les deux formats pour compatibilité
+ */
+export async function resolveFundId(cikOrId: string): Promise<number> {
+  // Architecture Extreme Budget: Athena uniquement, pas de Supabase
+  if (process.env.USE_ATHENA !== 'true' && process.env.USE_ATHENA !== '1') {
+    throw new Error('USE_ATHENA must be enabled. Supabase is no longer supported.');
+  }
+
+  // Si c'est un nombre, essayer comme ID d'abord
+  if (/^\d+$/.test(cikOrId)) {
+    const fundById = await getFund(parseInt(cikOrId));
+    if (fundById) {
+      return fundById.id;
+    }
+  }
+  
+  // Sinon, chercher par CIK (Athena uniquement)
+  const fund = await getFundByCikAthena(cikOrId);
+  if (!fund) {
+    throw new Error(`Fund with CIK ${cikOrId} not found`);
+  }
+  
+  return fund.id;
+}
+
+/**
+ * Obtenir un fond par CIK
+ */
+export async function getFundByCik(cik: string) {
+  // Architecture Extreme Budget: Athena uniquement, pas de Supabase
+  if (process.env.USE_ATHENA !== 'true' && process.env.USE_ATHENA !== '1') {
+    throw new Error('USE_ATHENA must be enabled. Supabase is no longer supported.');
+  }
+
+  // Chercher par CIK (Athena uniquement)
+  return await getFundByCikAthena(cik);
+}
+
+/**
  * Obtenir un fond par ID
+ * 
+ * Architecture Extreme Budget: Utilise S3 direct read pour les lectures
  */
 export async function getFund(id: number) {
-  const { data, error } = await supabase
-    .from("funds")
-    .select("*")
-    .eq("id", id)
-    .single();
+  // Architecture Extreme Budget: Athena uniquement, pas de Supabase
+  if (process.env.USE_ATHENA !== 'true' && process.env.USE_ATHENA !== '1') {
+    throw new Error('USE_ATHENA must be enabled. Supabase is no longer supported.');
+  }
 
-  if (error) throw error;
-  return data;
+  // Récupérer le fund depuis Athena
+  return await getFundByIdAthena(id);
 }
 
 /**
@@ -590,8 +675,24 @@ export async function getFundHoldings(fundId: number, limit = 100) {
 
 /**
  * Obtenir les filings d'un fond
+ * 
+ * Architecture Extreme Budget: Utilise Athena pour les lectures
  */
 export async function getFundFilings(fundId: number) {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const filings = await getFundFilingsAthena(fundId);
+      console.log(`[Athena] Retrieved ${filings.length} filings for fund ${fundId}`);
+      return filings;
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching fund filings for fund ${fundId}, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   const { data, error } = await supabase
     .from("fund_filings")
     .select("*")
@@ -604,8 +705,34 @@ export async function getFundFilings(fundId: number) {
 
 /**
  * Obtenir un filing spécifique avec ses détails
+ * 
+ * Architecture Extreme Budget: Utilise Athena pour les lectures
  */
 export async function getFundFiling(fundId: number, filingId: number) {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const filing = await getFundFilingByIdAthena(fundId, filingId);
+      if (filing) {
+        console.log(`[Athena] Found filing ${filingId} for fund ${fundId} via Athena`);
+        return filing;
+      }
+      // Si non trouvé, throw 404
+      const error = new Error(`Filing ${filingId} not found for fund ${fundId}`);
+      (error as any).statusCode = 404;
+      throw error;
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching filing ${filingId} for fund ${fundId}, falling back to Supabase: ${athenaError.message}`);
+      // Si c'est une 404, la propager
+      if (athenaError.statusCode === 404) {
+        throw athenaError;
+      }
+      // Sinon, fallback to Supabase
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   const { data, error } = await supabase
     .from("fund_filings")
     .select("*")
@@ -613,7 +740,15 @@ export async function getFundFiling(fundId: number, filingId: number) {
     .eq("fund_id", fundId)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Not found
+      const notFoundError = new Error(`Filing ${filingId} not found for fund ${fundId}`);
+      (notFoundError as any).statusCode = 404;
+      throw notFoundError;
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -739,6 +874,24 @@ export async function getFundDiffs(
   }
 
   // Par défaut : retourner les diffs calculés en base
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      // Utiliser Athena pour lire les diffs pré-calculés
+      const diffs = await getFundDiffsAthena(fundId, limit, options?.ticker);
+      console.log(`[Athena] Retrieved ${diffs.length} diffs for fund ${fundId}`);
+      
+      // Note: Les relations avec fund_filings ne sont pas incluses dans Athena
+      // Si nécessaire, faire des requêtes séparées pour enrichir les données
+      return diffs as any; // Cast pour compatibilité avec l'interface existante
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching fund diffs for fund ${fundId}, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   let query = supabase
     .from("fund_holdings_diff")
     .select(`
@@ -1021,6 +1174,18 @@ export async function getFundRecentChanges(fundId: number, minChangePct = 10, da
  * Retourne tous les changements significatifs de tous les funds suivis
  */
 export async function getAllFundsRecentChanges(minChangePct = 10, limit = 200, days?: number) {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      console.log(`[Athena] Fetching all funds recent changes via Athena`);
+      return await getAllFundsRecentChangesAthena(minChangePct, limit, days);
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching all funds recent changes, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
   // Construire la requête de base
   // Note: La syntaxe Supabase pour les jointures utilise le nom de la clé étrangère
   // Si aucune clé nommée n'existe, on utilise simplement le nom de la table

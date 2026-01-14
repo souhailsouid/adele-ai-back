@@ -1,0 +1,22 @@
+{
+  "name": "sec-smart-money-sync",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "zip": "cd dist && zip -r ../sec-smart-money-sync.zip .",
+    "bundle": "npm run build && npm run zip"
+  },
+  "dependencies": {
+    "@aws-sdk/client-athena": "^3.632.0",
+    "@aws-sdk/client-s3": "^3.632.0",
+    "parquetjs": "^0.11.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3",
+    "@types/aws-lambda": "^8.10.136",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0"
+  }
+}

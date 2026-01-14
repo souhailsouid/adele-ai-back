@@ -1,0 +1,282 @@
+[
+  {
+    "table_name": "company_filings",
+    "row_count": 628610,
+    "estimated_size_mb": 613.876953125,
+    "columns": [
+      "id",
+      "company_id",
+      "cik",
+      "form_type",
+      "accession_number",
+      "filing_date",
+      "period_of_report",
+      "document_url",
+      "raw_content",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "earnings_calendar",
+    "row_count": 167303,
+    "estimated_size_mb": 163.3818359375,
+    "columns": [
+      "id",
+      "cik",
+      "ticker",
+      "filing_date",
+      "accession_number",
+      "form_type",
+      "item",
+      "created_at",
+      "updated_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "fund_holdings_diff",
+    "row_count": 50375,
+    "estimated_size_mb": 49.1943359375,
+    "columns": [
+      "id",
+      "fund_id",
+      "ticker",
+      "filing_id_new",
+      "filing_id_old",
+      "diff_shares",
+      "diff_value",
+      "diff_pct_shares",
+      "action",
+      "created_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "signals",
+    "row_count": 16987,
+    "estimated_size_mb": 16.5888671875,
+    "columns": [
+      "id",
+      "source",
+      "type",
+      "timestamp",
+      "raw_data",
+      "summary",
+      "importance_score",
+      "tags",
+      "impact",
+      "priority",
+      "processed_at",
+      "processing_status",
+      "created_at",
+      "extracted_data"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "companies",
+    "row_count": 8191,
+    "estimated_size_mb": 7.9990234375,
+    "columns": [
+      "id",
+      "ticker",
+      "cik",
+      "name",
+      "sector",
+      "industry",
+      "market_cap",
+      "headquarters_country",
+      "headquarters_state",
+      "created_at",
+      "updated_at",
+      "sic_code",
+      "category",
+      "ein",
+      "fiscal_year_end",
+      "filer_category",
+      "exchanges",
+      "former_names"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "fund_filings",
+    "row_count": 262,
+    "estimated_size_mb": 0.255859375,
+    "columns": [
+      "id",
+      "fund_id",
+      "accession_number",
+      "form_type",
+      "filing_date",
+      "period_of_report",
+      "raw_storage_path",
+      "status",
+      "created_at",
+      "updated_at",
+      "cik"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "macro_calendar_events",
+    "row_count": 200,
+    "estimated_size_mb": 0.1953125,
+    "columns": [
+      "id",
+      "scope",
+      "date",
+      "event",
+      "country",
+      "currency",
+      "impact",
+      "time",
+      "source",
+      "data",
+      "cached_at",
+      "expires_at",
+      "created_at",
+      "updated_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "flow_alerts",
+    "row_count": 191,
+    "estimated_size_mb": 0.1865234375,
+    "columns": [
+      "id",
+      "ticker",
+      "alert_rule",
+      "type",
+      "strike",
+      "expiry",
+      "option_chain",
+      "total_premium",
+      "total_size",
+      "trade_count",
+      "volume",
+      "open_interest",
+      "volume_oi_ratio",
+      "underlying_price",
+      "total_ask_side_prem",
+      "total_bid_side_prem",
+      "price",
+      "all_opening_trades",
+      "has_floor",
+      "has_sweep",
+      "has_multileg",
+      "has_singleleg",
+      "expiry_count",
+      "issue_type",
+      "created_at",
+      "data",
+      "data_date",
+      "cached_at",
+      "expires_at",
+      "uw_id"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "funds",
+    "row_count": 20,
+    "estimated_size_mb": 0.01953125,
+    "columns": [
+      "id",
+      "name",
+      "cik",
+      "tier_influence",
+      "category",
+      "created_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "earnings_alerts",
+    "row_count": 2,
+    "estimated_size_mb": 0.001953125,
+    "columns": [
+      "id",
+      "company_id",
+      "filing_id",
+      "alert_type",
+      "alert_data",
+      "importance_score",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "fund_holdings",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [
+      "id",
+      "fund_id",
+      "filing_id",
+      "ticker",
+      "cusip",
+      "shares",
+      "market_value",
+      "type",
+      "created_at",
+      "cik"
+    ],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "notifications",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "cron_registry",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "file_processing_queue",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "ticker_data",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "greeks_data",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "oi_iv_max_pain",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  },
+  {
+    "table_name": "price_context",
+    "row_count": 0,
+    "estimated_size_mb": 0,
+    "columns": [],
+    "foreign_keys": []
+  }
+]

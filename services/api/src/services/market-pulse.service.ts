@@ -4,6 +4,11 @@
 
 import { supabase } from "../supabase";
 import { logger } from "../utils/logger";
+import { 
+  getTickerFundsChangesAthena, 
+  getMarketPulseAthena, 
+  getPulseFeedAthena 
+} from "../athena/market_pulse";
 
 export interface TickerFundChange {
   ticker: string;
@@ -74,6 +79,19 @@ export async function getTickerFundsChanges(
   days?: number,
   minChangePct?: number
 ): Promise<TickerFundChange[]> {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const log = logger.child({ operation: 'getTickerFundsChanges', ticker });
+      log.info('Fetching ticker funds changes via Athena');
+      return await getTickerFundsChangesAthena(ticker, days, minChangePct);
+    } catch (athenaError: any) {
+      logger.error(`[Athena] Error fetching ticker funds changes, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
   try {
     const log = logger.child({ operation: 'getTickerFundsChanges', ticker });
     log.info('Fetching ticker funds changes');
@@ -162,6 +180,19 @@ export async function getTickerFundsChanges(
  * Récupère le Market Pulse global (tendances sectorielles et changements globaux)
  */
 export async function getMarketPulse(days: number = 30): Promise<MarketPulse> {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const log = logger.child({ operation: 'getMarketPulse', days });
+      log.info('Fetching market pulse via Athena');
+      return await getMarketPulseAthena(days);
+    } catch (athenaError: any) {
+      logger.error(`[Athena] Error fetching market pulse, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
   try {
     const log = logger.child({ operation: 'getMarketPulse', days });
     log.info('Fetching market pulse');
@@ -252,6 +283,19 @@ export async function getPulseFeed(options?: {
   minChangePct?: number;
   limit?: number;
 }): Promise<PulseFeedItem[]> {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const log = logger.child({ operation: 'getPulseFeed', options });
+      log.info('Fetching pulse feed via Athena');
+      return await getPulseFeedAthena(options);
+    } catch (athenaError: any) {
+      logger.error(`[Athena] Error fetching pulse feed, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
   try {
     const log = logger.child({ operation: 'getPulseFeed', options });
     log.info('Fetching pulse feed');

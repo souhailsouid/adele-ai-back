@@ -6,6 +6,8 @@
 import { supabase } from "../supabase";
 import { getFMPSECCompanyFullProfile } from "../fmp";
 import { logger } from "../utils/logger";
+import { insertRowS3 } from "../athena/write";
+import { getCompanyByTickerAthena, getCompanyByCikAthena } from "../athena/companies";
 
 const log = logger.child({ service: "CompanyEnrichment" });
 
@@ -78,14 +80,82 @@ export async function enrichCompanyFromFMP(
     }
 
     // 3. Vérifier si l'entreprise existe déjà
-    const { data: existing, error: checkError } = await supabase
-      .from("companies")
-      .select("id, ticker, sector, industry")
-      .or(`ticker.eq.${upperTicker},cik.eq.${companyData.cik}`)
-      .maybeSingle();
+    const useS3Writes = process.env.USE_S3_WRITES === 'true' || process.env.USE_S3_WRITES === '1';
+    const useAthenaReads = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+    
+    let existing = null;
+    let checkError = null;
+    
+    if (useAthenaReads) {
+      try {
+        // Chercher par ticker d'abord
+        existing = await getCompanyByTickerAthena(upperTicker);
+        
+        // Si pas trouvé et qu'on a un CIK, chercher par CIK
+        if (!existing && companyData.cik) {
+          existing = await getCompanyByCikAthena(companyData.cik);
+        }
+      } catch (athenaError: any) {
+        log.warn(`[Athena] Error checking existing company, falling back to Supabase: ${athenaError.message}`);
+        // Fallback to Supabase
+        const { data: byTicker, error: tickerError } = await supabase
+          .from("companies")
+          .select("id, ticker, sector, industry")
+          .eq("ticker", upperTicker)
+          .maybeSingle();
+        
+        if (tickerError && tickerError.code !== "PGRST116") {
+          checkError = tickerError;
+        } else if (byTicker) {
+          existing = byTicker;
+        }
+        
+        if (!existing && companyData.cik) {
+          const { data: byCik, error: cikError } = await supabase
+            .from("companies")
+            .select("id, ticker, sector, industry")
+            .eq("cik", companyData.cik)
+            .maybeSingle();
+          
+          if (cikError && cikError.code !== "PGRST116") {
+            checkError = cikError;
+          } else if (byCik) {
+            existing = byCik;
+          }
+        }
+      }
+    } else {
+      // Supabase check if Athena reads are not enabled
+      const { data: byTicker, error: tickerError } = await supabase
+        .from("companies")
+        .select("id, ticker, sector, industry")
+        .eq("ticker", upperTicker)
+        .maybeSingle();
+      
+      if (tickerError && tickerError.code !== "PGRST116") {
+        checkError = tickerError;
+        log.error(`Error checking company by ticker: ${tickerError.message}`);
+      } else if (byTicker) {
+        existing = byTicker;
+      }
+      
+      if (!existing && companyData.cik) {
+        const { data: byCik, error: cikError } = await supabase
+          .from("companies")
+          .select("id, ticker, sector, industry")
+          .eq("cik", companyData.cik)
+          .maybeSingle();
+        
+        if (cikError && cikError.code !== "PGRST116") {
+          checkError = cikError;
+          log.error(`Error checking company by CIK: ${cikError.message}`);
+        } else if (byCik) {
+          existing = byCik;
+        }
+      }
+    }
 
-    if (checkError && checkError.code !== "PGRST116") {
-      log.error(`Error checking existing company: ${checkError.message}`);
+    if (checkError) {
       throw checkError;
     }
 
@@ -131,32 +201,96 @@ export async function enrichCompanyFromFMP(
       }
     } else {
       // 4b. Créer une nouvelle entreprise
-      const { data: newCompany, error: insertError } = await supabase
-        .from("companies")
-        .insert({
-          ticker: companyData.ticker,
-          cik: companyData.cik,
-          name: companyData.name,
+      if (useS3Writes) {
+        try {
+          log.info(`[S3 Write] Creating company ${upperTicker} on S3`);
+          const insertedCompany = await insertRowS3('companies', {
+            ticker: companyData.ticker,
+            cik: companyData.cik,
+            name: companyData.name,
+            sector: companyData.sector,
+            industry: companyData.industry,
+            market_cap: companyData.market_cap,
+            headquarters_country: companyData.headquarters_country,
+            headquarters_state: companyData.headquarters_state,
+          });
+          created = true;
+          log.info(`Created company ${upperTicker} on S3`, {
+            id: insertedCompany.id,
+            sector: companyData.sector,
+            industry: companyData.industry,
+            cik: companyData.cik,
+            s3Key: insertedCompany.s3Key,
+          });
+        } catch (s3Error: any) {
+          log.error(`[S3 Write] Error inserting to S3, falling back to Supabase: ${s3Error.message}`);
+          // Fallback to Supabase if S3 write fails
+          const { data: newCompanyArray, error: insertError } = await supabase
+            .from("companies")
+            .insert({
+              ticker: companyData.ticker,
+              cik: companyData.cik,
+              name: companyData.name,
+              sector: companyData.sector,
+              industry: companyData.industry,
+              market_cap: companyData.market_cap,
+              headquarters_country: companyData.headquarters_country,
+              headquarters_state: companyData.headquarters_state,
+            })
+            .select();
+
+          if (insertError) {
+            log.error(`Error creating company: ${insertError.message}`);
+            throw insertError;
+          }
+
+          if (!newCompanyArray || newCompanyArray.length === 0) {
+            log.error(`Company insert returned no data for ${upperTicker}`);
+            throw new Error("Company insert failed: no data returned");
+          }
+
+          created = true;
+          log.info(`Created company ${upperTicker} (fallback Supabase)`, {
+            id: newCompanyArray[0].id,
+            sector: companyData.sector,
+            industry: companyData.industry,
+            cik: companyData.cik,
+          });
+        }
+      } else {
+        // Original Supabase insert
+        const { data: newCompanyArray, error: insertError } = await supabase
+          .from("companies")
+          .insert({
+            ticker: companyData.ticker,
+            cik: companyData.cik,
+            name: companyData.name,
+            sector: companyData.sector,
+            industry: companyData.industry,
+            market_cap: companyData.market_cap,
+            headquarters_country: companyData.headquarters_country,
+            headquarters_state: companyData.headquarters_state,
+          })
+          .select();
+
+        if (insertError) {
+          log.error(`Error creating company: ${insertError.message}`);
+          throw insertError;
+        }
+
+        if (!newCompanyArray || newCompanyArray.length === 0) {
+          log.error(`Company insert returned no data for ${upperTicker}`);
+          throw new Error("Company insert failed: no data returned");
+        }
+
+        created = true;
+        log.info(`Created company ${upperTicker}`, {
+          id: newCompanyArray[0].id,
           sector: companyData.sector,
           industry: companyData.industry,
-          market_cap: companyData.market_cap,
-          headquarters_country: companyData.headquarters_country,
-          headquarters_state: companyData.headquarters_state,
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        log.error(`Error creating company: ${insertError.message}`);
-        throw insertError;
+          cik: companyData.cik,
+        });
       }
-
-      created = true;
-      log.info(`Created company ${upperTicker}`, {
-        sector: companyData.sector,
-        industry: companyData.industry,
-        cik: companyData.cik,
-      });
     }
 
     return {

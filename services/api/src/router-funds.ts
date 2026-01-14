@@ -5,7 +5,7 @@
 
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { supabase } from "./supabase";
-import { createFund, getFunds, getFund, getFundHoldings, getFundFilings, getFundFiling, getFilingHoldings, getFundDiffs, getFundTickerDiffs, getFundRecentChanges, getAllFundsRecentChanges, discoverAllFundFilings, retryFilingParsing, retryAllFundFilings, getTickerFundsChanges, getMarketPulse, getPulseFeed, analyzeFundDiffsStrategically } from "./funds";
+import { createFund, getFunds, getFund, getFundByCik, resolveFundId, getFundHoldings, getFundFilings, getFundFiling, getFilingHoldings, getFundDiffs, getFundTickerDiffs, getFundRecentChanges, getAllFundsRecentChanges, discoverAllFundFilings, retryFilingParsing, retryAllFundFilings, getTickerFundsChanges, getMarketPulse, getPulseFeed, analyzeFundDiffsStrategically } from "./funds";
 import { getAccumulationNotifications, getGlobalAccumulationNotifications } from "./services/fund-notifications.service";
 import { getFundCiks, addFundCik, removeFundCik } from "./services/fund-ciks.service";
 import {
@@ -80,52 +80,60 @@ const fundsRoutes: Route[] = [
   },
   {
     method: "GET",
-    path: "/funds/{id}",
+    path: "/funds/{cik}",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
-      return await getFund(parseInt(id));
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fund = await getFundByCik(cik);
+      if (!fund) {
+        const error = new Error(`Fund with CIK ${cik} not found`);
+        (error as any).statusCode = 404;
+        throw error;
+      }
+      return fund;
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/holdings",
+    path: "/funds/{cik}/holdings",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fundId = await resolveFundId(cik);
       const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 100;
-      return await getFundHoldings(parseInt(id), limit);
+      return await getFundHoldings(fundId, limit);
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/filings/{filingId}/holdings",
+    path: "/funds/{cik}/filings/{filingId}/holdings",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const filingId = getPathParam(event, "filingId");
-      if (!id || !filingId) throw new Error("Missing id or filingId parameter");
+      if (!cik || !filingId) throw new Error("Missing cik or filingId parameter");
       const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 1000;
-      return await getFilingHoldings(parseInt(id), parseInt(filingId), limit);
+      return await getFilingHoldings(await resolveFundId(cik), parseInt(filingId), limit);
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/filings/{filingId}",
+    path: "/funds/{cik}/filings/{filingId}",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const filingId = getPathParam(event, "filingId");
-      if (!id || !filingId) throw new Error("Missing id or filingId parameter");
-      return await getFundFiling(parseInt(id), parseInt(filingId));
+      if (!cik || !filingId) throw new Error("Missing cik or filingId parameter");
+      return await getFundFiling(await resolveFundId(cik), parseInt(filingId));
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/filings",
+    path: "/funds/{cik}/filings",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fundId = await resolveFundId(cik);
       const formType = getQueryParam(event, "form_type");
-      const data = await getFundFilings(parseInt(id));
+      const data = await getFundFilings(fundId);
       if (formType && data) {
         return data.filter((f: any) => f.form_type === formType);
       }
@@ -134,10 +142,11 @@ const fundsRoutes: Route[] = [
   },
   {
     method: "GET",
-    path: "/funds/{id}/diffs",
+    path: "/funds/{cik}/diffs",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      const fundId = await resolveFundId(cik);
       const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 50;
       
       const options: {
@@ -168,40 +177,40 @@ const fundsRoutes: Route[] = [
         options.ticker = event.queryStringParameters.ticker;
       }
 
-      return await getFundDiffs(parseInt(id), limit, Object.keys(options).length > 0 ? options : undefined);
+      return await getFundDiffs(fundId, limit, Object.keys(options).length > 0 ? options : undefined);
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/diffs/{ticker}",
+    path: "/funds/{cik}/diffs/{ticker}",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const ticker = getPathParam(event, "ticker");
-      if (!id || !ticker) throw new Error("Missing id or ticker parameter");
-      return await getFundTickerDiffs(parseInt(id), ticker);
+      if (!cik || !ticker) throw new Error("Missing cik or ticker parameter");
+      return await getFundTickerDiffs(await resolveFundId(cik), ticker);
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/changes",
+    path: "/funds/{cik}/changes",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
       const minChangePct = getQueryParam(event, "min_change_pct") 
         ? parseFloat(getQueryParam(event, "min_change_pct")!) 
         : 10;
       const days = getQueryParam(event, "days") 
         ? parseInt(getQueryParam(event, "days")!) 
         : undefined;
-      return await getFundRecentChanges(parseInt(id), minChangePct, days);
+      return await getFundRecentChanges(await resolveFundId(cik), minChangePct, days);
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/diffs/strategic",
+    path: "/funds/{cik}/diffs/strategic",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
       
       // Récupérer les diffs bruts d'abord
       const limit = getQueryParam(event, "limit") ? parseInt(getQueryParam(event, "limit")!) : 500;
@@ -241,37 +250,38 @@ const fundsRoutes: Route[] = [
       // Ne passer les options que si elles sont vraiment spécifiées (from_date/to_date/quarter/year)
       const hasTimeOptions = !!(options.from_date || options.to_date || options.quarter || options.year);
       const includeLowConviction = getQueryParam(event, "include_low_conviction") === 'true';
-      const rawDiffs = await getFundDiffs(parseInt(id), limit, hasTimeOptions ? options : undefined);
+      const rawDiffs = await getFundDiffs(await resolveFundId(cik), limit, hasTimeOptions ? options : undefined);
       
       // Debug: logger le nombre de diffs récupérés
-      console.log(`[Strategic Analysis] Fund ${id}: ${rawDiffs?.length || 0} raw diffs retrieved`);
+      const fundId = await resolveFundId(cik);
+      console.log(`[Strategic Analysis] Fund ${fundId}: ${rawDiffs?.length || 0} raw diffs retrieved`);
       
       // Analyser stratégiquement
-      const analysis = await analyzeFundDiffsStrategically(parseInt(id), rawDiffs as any[], noiseThreshold, includeLowConviction);
+      const analysis = await analyzeFundDiffsStrategically(fundId, rawDiffs as any[], noiseThreshold, includeLowConviction);
       
       // Debug: logger le résultat
-      console.log(`[Strategic Analysis] Fund ${id}: Analysis completed. Strong conviction: ${analysis.summary.strong_conviction_count}`);
+      console.log(`[Strategic Analysis] Fund ${fundId}: Analysis completed. Strong conviction: ${analysis.summary.strong_conviction_count}`);
       
       return analysis;
     },
   },
   {
     method: "GET",
-    path: "/funds/{id}/portfolio",
+    path: "/funds/{cik}/portfolio",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
       
       const useDeduplication = getQueryParam(event, "deduplicate") !== "false";
       
       if (useDeduplication) {
-        return await getFundPortfolioDeduplicated(parseInt(id));
+        return await getFundPortfolioDeduplicated(await resolveFundId(cik));
       }
       
       const { data: latestFiling, error: filingError } = await supabase
         .from("fund_filings")
         .select("id")
-        .eq("fund_id", parseInt(id))
+        .eq("fund_id", await resolveFundId(cik))
         .eq("status", "PARSED")
         .order("filing_date", { ascending: false })
         .limit(1)
@@ -298,57 +308,57 @@ const fundsRoutes: Route[] = [
   },
   {
     method: "GET",
-    path: "/funds/{id}/transparency",
+    path: "/funds/{cik}/transparency",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
-      return await getFundTransparencyInfo(parseInt(id));
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      return await getFundTransparencyInfo(await resolveFundId(cik));
     },
   },
   {
     method: "POST",
-    path: "/funds/{id}/discover",
+    path: "/funds/{cik}/discover",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
       // Découvrir les filings pour TOUS les CIK (principal + secondaires)
-      const result = await discoverAllFundFilings(parseInt(id));
+      const result = await discoverAllFundFilings(await resolveFundId(cik));
       return {
         message: "Discovery started for all CIKs",
-        fund_id: parseInt(id),
+        fund_id: await resolveFundId(cik),
         ...result,
       };
     },
   },
   {
     method: "POST",
-    path: "/funds/{id}/filings/{filingId}/retry",
+    path: "/funds/{cik}/filings/{filingId}/retry",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const filingId = getPathParam(event, "filingId");
-      if (!id || !filingId) throw new Error("Missing id or filingId parameter");
-      return await retryFilingParsing(parseInt(id), parseInt(filingId));
+      if (!cik || !filingId) throw new Error("Missing cik or filingId parameter");
+      return await retryFilingParsing(await resolveFundId(cik), parseInt(filingId));
     },
   },
   {
     method: "POST",
-    path: "/funds/{id}/filings/retry-all",
+    path: "/funds/{cik}/filings/retry-all",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
       const body = parseBody(event);
       const status = body?.status; // "FAILED", "DISCOVERED", or "ALL"
-      return await retryAllFundFilings(parseInt(id), status ? { status } : undefined);
+      return await retryAllFundFilings(await resolveFundId(cik), status ? { status } : undefined);
     },
   },
   {
     method: "POST",
-    path: "/funds/{id}/filings/{filingId}/calculate-diff",
+    path: "/funds/{cik}/filings/{filingId}/calculate-diff",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const filingId = getPathParam(event, "filingId");
-      if (!id || !filingId) throw new Error("Missing id or filingId parameter");
-      return await calculateFundDiff(parseInt(id), parseInt(filingId));
+      if (!cik || !filingId) throw new Error("Missing cik or filingId parameter");
+      return await calculateFundDiff(await resolveFundId(cik), parseInt(filingId));
     },
   },
   {
@@ -371,60 +381,60 @@ const fundsRoutes: Route[] = [
   // Routes Fund CIKs
   {
     method: "GET",
-    path: "/funds/{id}/ciks",
+    path: "/funds/{cik}/ciks",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
-      return await getFundCiks(parseInt(id));
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+      return await getFundCiks(await resolveFundId(cik));
     },
   },
   {
     method: "POST",
-    path: "/funds/{id}/ciks",
+    path: "/funds/{cik}/ciks",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
-      if (!id) throw new Error("Missing id parameter");
+      const fundCik = getPathParam(event, "cik");
+      if (!fundCik) throw new Error("Missing cik parameter");
       const body = parseBody(event);
-      const cik = body?.cik;
+      const cikToAdd = body?.cik;
       const entity_name = body?.entity_name;
-      if (!cik) throw new Error("Missing cik parameter");
-      return await addFundCik(parseInt(id), cik, entity_name);
+      if (!cikToAdd) throw new Error("Missing cik in body");
+      return await addFundCik(await resolveFundId(fundCik), cikToAdd, entity_name);
     },
   },
   {
     method: "DELETE",
-    path: "/funds/{id}/ciks/{cik}",
+    path: "/funds/{cik}/ciks/{cikToRemove}",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
       const cik = getPathParam(event, "cik");
-      if (!id || !cik) throw new Error("Missing id or cik parameter");
-      await removeFundCik(parseInt(id), cik);
+      const cikToRemove = getPathParam(event, "cikToRemove");
+      if (!cik || !cikToRemove) throw new Error("Missing cik or cikToRemove parameter");
+      await removeFundCik(await resolveFundId(cik), cikToRemove);
       return { message: "CIK removed successfully" };
     },
   },
   // Routes Notifications Funds
   {
     method: "GET",
-    path: "/funds/{id}/notifications/preferences",
+    path: "/funds/{cik}/notifications/preferences",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const jwtClaims = (event.requestContext as any)?.authorizer?.jwt?.claims;
       const userId = jwtClaims?.sub || event.headers['x-user-id'];
-      if (!id || !userId) throw new Error("Missing id or user_id");
-      const prefs = await getNotificationPreferences(userId, parseInt(id));
+      if (!cik || !userId) throw new Error("Missing cik or user_id parameter");
+      const prefs = await getNotificationPreferences(userId, await resolveFundId(cik));
       return prefs || { message: "No preferences set, using defaults" };
     },
   },
   {
     method: "PUT",
-    path: "/funds/{id}/notifications/preferences",
+    path: "/funds/{cik}/notifications/preferences",
     handler: async (event) => {
-      const id = getPathParam(event, "id");
+      const cik = getPathParam(event, "cik");
       const jwtClaims = (event.requestContext as any)?.authorizer?.jwt?.claims;
       const userId = jwtClaims?.sub || event.headers['x-user-id'];
-      if (!id || !userId) throw new Error("Missing id or user_id");
+      if (!cik || !userId) throw new Error("Missing cik or user_id parameter");
       const body = parseBody(event);
-      return await upsertNotificationPreferences(userId, parseInt(id), body);
+      return await upsertNotificationPreferences(userId, await resolveFundId(cik), body);
     },
   },
   {

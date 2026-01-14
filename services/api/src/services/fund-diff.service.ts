@@ -247,15 +247,54 @@ export async function calculateFundDiff(
     }
 
     // Insérer les nouvelles diffs et récupérer les IDs
-    const { data: insertedDiffs, error: insertError } = await supabase
-      .from("fund_holdings_diff")
-      .insert(diffRecords)
-      .select("id, ticker, action, diff_shares, diff_pct_shares, filing_id_new");
+    const useS3Writes = process.env.USE_S3_WRITES === 'true' || process.env.USE_S3_WRITES === '1';
+    let insertedDiffs: any[] = [];
+    
+    if (useS3Writes) {
+      try {
+        console.log(`[S3 Write] Inserting ${diffRecords.length} diffs directly to S3...`);
+        const { insertRowsS3 } = await import("../athena/write");
+        const result = await insertRowsS3('fund_holdings_diff', diffRecords);
+        // Construire insertedDiffs avec les IDs générés
+        insertedDiffs = diffRecords.map((record, index) => ({
+          id: result.ids[index],
+          ticker: record.ticker,
+          action: record.action,
+          diff_shares: record.diff_shares,
+          diff_pct_shares: record.diff_pct_shares,
+          filing_id_new: record.filing_id_new,
+        }));
+        console.log(`[S3 Write] ${insertedDiffs.length} diffs created on S3`);
+      } catch (s3Error: any) {
+        console.error(`[S3 Write] Error inserting diffs to S3, falling back to Supabase: ${s3Error.message}`);
+        // Fallback to Supabase if S3 write fails
+        const { data: diffsArray, error: insertError } = await supabase
+          .from("fund_holdings_diff")
+          .insert(diffRecords)
+          .select("id, ticker, action, diff_shares, diff_pct_shares, filing_id_new");
 
-    if (insertError) {
-      console.error("Error saving diffs:", insertError);
-      // Ne pas throw, on continue quand même
-    } else if (insertedDiffs && insertedDiffs.length > 0 && actualNewFilingId) {
+        if (insertError) {
+          console.error("Error saving diffs:", insertError);
+        } else {
+          insertedDiffs = diffsArray || [];
+        }
+      }
+    } else {
+      // Original Supabase insert
+      const { data: diffsArray, error: insertError } = await supabase
+        .from("fund_holdings_diff")
+        .insert(diffRecords)
+        .select("id, ticker, action, diff_shares, diff_pct_shares, filing_id_new");
+
+      if (insertError) {
+        console.error("Error saving diffs:", insertError);
+        // Ne pas throw, on continue quand même
+      } else {
+        insertedDiffs = diffsArray || [];
+      }
+    }
+    
+    if (insertedDiffs && insertedDiffs.length > 0 && actualNewFilingId) {
       // 8. Générer les notifications pour les utilisateurs qui suivent ce fund
       // (Asynchrone, non bloquant)
       generateNotificationsForDiffs(fundId, fundName, insertedDiffs, diffs)

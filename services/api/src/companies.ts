@@ -2,6 +2,10 @@ import { supabase } from "./supabase";
 import { z } from "zod";
 
 import { enrichCompanyFromFMP, enrichCompaniesBatch } from "./services/company-enrichment.service";
+import { getCompanyByTickerAthena, getCompanyByCikAthena, getCompanyByIdAthena, getCompaniesAthena } from "./athena/companies";
+import { insertRowS3 } from "./athena/write";
+import { executeAthenaQuery } from "./athena/query";
+import { withCache, CacheKeys } from "./athena/cache";
 
 const CreateCompanyInput = z.object({
   ticker: z.string().min(1).max(10),
@@ -30,6 +34,8 @@ export interface Company {
 
 /**
  * Créer une nouvelle entreprise à suivre
+ * 
+ * Architecture Extreme Budget: Écriture directe sur S3, pas Supabase
  */
 export async function createCompany(body: unknown) {
   console.log("[DEBUG] createCompany called with body:", JSON.stringify(body));
@@ -38,15 +44,86 @@ export async function createCompany(body: unknown) {
   const input = CreateCompanyInput.parse(body);
   console.log("[DEBUG] Input validated:", input);
 
-  // Vérifier si l'entreprise existe déjà
-  const { data: existing, error: checkError } = await supabase
+  const useS3 = process.env.USE_S3_WRITES === 'true' || process.env.USE_S3_WRITES === '1';
+
+  if (useS3) {
+    // Architecture Extreme Budget: Utiliser S3 + Athena
+    
+    // 1. Vérifier si l'entreprise existe déjà (lecture Athena)
+    const existingByTicker = await getCompanyByTickerAthena(input.ticker);
+    if (existingByTicker) {
+      throw new Error(`Company with ticker ${input.ticker} already exists`);
+    }
+
+    const existingByCik = await getCompanyByCikAthena(input.cik);
+    if (existingByCik) {
+      throw new Error(`Company with CIK ${input.cik} already exists`);
+    }
+
+    // 2. Écrire directement sur S3 (pas Supabase!)
+    const { id, s3Key } = await insertRowS3('companies', {
+      ticker: input.ticker.toUpperCase(),
+      cik: input.cik,
+      name: input.name,
+      sector: input.sector || null,
+      industry: input.industry || null,
+      market_cap: input.market_cap || null,
+      headquarters_country: input.headquarters_country || null,
+      headquarters_state: input.headquarters_state || null,
+    });
+
+    console.log(`[SUCCESS] Company created on S3: ${input.name} (Ticker: ${input.ticker}, CIK: ${input.cik}, ID: ${id})`);
+
+    return {
+      company: {
+        id,
+        ticker: input.ticker.toUpperCase(),
+        cik: input.cik,
+        name: input.name,
+        sector: input.sector || null,
+        industry: input.industry || null,
+        market_cap: input.market_cap || null,
+        headquarters_country: input.headquarters_country || null,
+        headquarters_state: input.headquarters_state || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      s3Key,
+      message: "Company created successfully on S3. Filings discovery will start automatically.",
+    };
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
+  let existing = null;
+  
+  // Chercher par ticker
+  const { data: byTicker, error: tickerError } = await supabase
     .from("companies")
     .select("id")
-    .or(`ticker.eq.${input.ticker},cik.eq.${input.cik}`)
-    .single();
+    .eq("ticker", input.ticker.toUpperCase())
+    .maybeSingle();
 
-  if (checkError && checkError.code !== "PGRST116") {
-    throw checkError;
+  if (tickerError && tickerError.code !== "PGRST116") {
+    throw tickerError;
+  }
+  if (byTicker) {
+    existing = byTicker;
+  }
+
+  // Si pas trouvé, chercher par CIK
+  if (!existing) {
+    const { data: byCik, error: cikError } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("cik", input.cik)
+      .maybeSingle();
+
+    if (cikError && cikError.code !== "PGRST116") {
+      throw cikError;
+    }
+    if (byCik) {
+      existing = byCik;
+    }
   }
 
   if (existing) {
@@ -54,7 +131,7 @@ export async function createCompany(body: unknown) {
   }
 
   // Créer l'entreprise
-  const { data: company, error: insertError } = await supabase
+  const { data: companyArray, error: insertError } = await supabase
     .from("companies")
     .insert({
       ticker: input.ticker.toUpperCase(),
@@ -66,17 +143,19 @@ export async function createCompany(body: unknown) {
       headquarters_country: input.headquarters_country,
       headquarters_state: input.headquarters_state,
     })
-    .select()
-    .single();
+    .select();
 
   if (insertError) {
     throw insertError;
   }
 
-  console.log(`[SUCCESS] Company created: ${company.name} (Ticker: ${company.ticker}, CIK: ${company.cik})`);
+  if (!companyArray || companyArray.length === 0) {
+    throw new Error("Company insert failed: no data returned");
+  }
 
-  // Note: La découverte des filings se fera automatiquement via le collector SEC (EventBridge cron)
-  // On pourrait aussi déclencher une découverte immédiate ici si nécessaire
+  const company = companyArray[0];
+
+  console.log(`[SUCCESS] Company created: ${company.name} (Ticker: ${company.ticker}, CIK: ${company.cik})`);
 
   return {
     company,
@@ -86,12 +165,30 @@ export async function createCompany(body: unknown) {
 
 /**
  * Lister toutes les entreprises
+ * 
+ * Architecture Extreme Budget: Utilise Athena pour les lectures
  */
 export async function getCompanies() {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      // Limiter à 1000 par défaut pour éviter les requêtes trop lourdes
+      const companies = await getCompaniesAthena(1000);
+      console.log(`[Athena] Retrieved ${companies.length} companies`);
+      return companies;
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching companies, falling back to Supabase: ${athenaError.message}`);
+      // Fallback to Supabase if Athena fails
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   const { data, error } = await supabase
     .from("companies")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(1000);
 
   if (error) throw error;
   return data;
@@ -99,29 +196,88 @@ export async function getCompanies() {
 
 /**
  * Obtenir une entreprise par ID
+ * 
+ * Architecture Extreme Budget: Utilise S3 direct read ou Athena
  */
 export async function getCompany(id: number) {
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+
+  if (useAthena) {
+    try {
+      const company = await getCompanyByIdAthena(id);
+      if (company) {
+        console.log(`[Athena] Found company ${id} via Athena`);
+        return company;
+      }
+      // Si non trouvé, throw 404
+      const error = new Error(`Company with id ${id} not found`);
+      (error as any).statusCode = 404;
+      throw error;
+    } catch (athenaError: any) {
+      console.error(`[Athena] Error fetching company ${id}, falling back to Supabase: ${athenaError.message}`);
+      // Si c'est une 404, la propager
+      if (athenaError.statusCode === 404) {
+        throw athenaError;
+      }
+      // Sinon, fallback to Supabase
+    }
+  }
+
+  // Fallback: Utiliser Supabase (temporaire, à supprimer après migration complète)
   const { data, error } = await supabase
     .from("companies")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // Not found
+      const notFoundError = new Error(`Company with id ${id} not found`);
+      (notFoundError as any).statusCode = 404;
+      throw notFoundError;
+    }
+    throw error;
+  }
   return data;
 }
 
 /**
  * Obtenir une entreprise par ticker
+ * 
+ * Architecture Extreme Budget: Utilise Athena pour les lectures
  */
 export async function getCompanyByTicker(ticker: string) {
+  // Utiliser Athena pour les lectures (Extreme Budget)
+  const useAthena = process.env.USE_ATHENA === 'true' || process.env.USE_ATHENA === '1';
+  
+  if (useAthena) {
+    try {
+      return await getCompanyByTickerAthena(ticker);
+    } catch (error: any) {
+      console.error(`[Athena] Error fetching company by ticker ${ticker}:`, error.message);
+      // Fallback vers Supabase en cas d'erreur Athena
+      console.log(`[Fallback] Using Supabase for company ${ticker}`);
+    }
+  }
+
+  // Fallback: Utiliser Supabase (pour compatibilité ou si Athena désactivé)
   const { data, error } = await supabase
     .from("companies")
     .select("*")
     .eq("ticker", ticker.toUpperCase())
-    .single();
+    .maybeSingle();
 
-  if (error) throw error;
+  // Si erreur et ce n'est pas "not found", throw
+  if (error && error.code !== "PGRST116") {
+    throw error;
+  }
+
+  // Si pas de données, retourner null (le handler gérera le 404)
+  if (!data) {
+    return null;
+  }
+
   return data;
 }
 
