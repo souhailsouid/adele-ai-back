@@ -3,7 +3,8 @@ import { z } from "zod";
 
 import { enrichCompanyFromFMP, enrichCompaniesBatch } from "./services/company-enrichment.service";
 import { getCompanyByTickerAthena, getCompanyByCikAthena, getCompanyByIdAthena, getCompaniesAthena } from "./athena/companies";
-import { insertRowS3 } from "./athena/write";
+// Import lazy pour éviter de charger parquetjs si non nécessaire
+// import { insertRowS3 } from "./athena/write";
 import { executeAthenaQuery } from "./athena/query";
 import { withCache, CacheKeys } from "./athena/cache";
 
@@ -61,6 +62,8 @@ export async function createCompany(body: unknown) {
     }
 
     // 2. Écrire directement sur S3 (pas Supabase!)
+    // Import lazy pour éviter de charger parquetjs si non nécessaire
+    const { insertRowS3 } = await import('./athena/write');
     const { id, s3Key } = await insertRowS3('companies', {
       ticker: input.ticker.toUpperCase(),
       cik: input.cik,

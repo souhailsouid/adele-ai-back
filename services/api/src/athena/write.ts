@@ -9,9 +9,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createRequire } from 'module';
+import * as path from 'path';
 
 // parquetjs est un module CommonJS, on doit utiliser require
-const require = createRequire(import.meta.url);
+// En CommonJS (après build esbuild), __filename est disponible
+let requirePath: string;
+if (typeof __filename !== 'undefined') {
+  requirePath = __filename;
+} else {
+  // Fallback: utiliser un chemin absolu
+  requirePath = path.join(process.cwd(), 'index.js');
+}
+const require = createRequire(requirePath);
 const parquetjs = require('parquetjs');
 const { ParquetSchema, ParquetWriter } = parquetjs;
 

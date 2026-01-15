@@ -43,6 +43,8 @@ for (const { input, output } of entryPoints) {
     target: "node20",
     format: "cjs",
     sourcemap: false,
+    // Exclure parquetjs du bundle - il sera fourni par la Lambda Layer
+    external: ["parquetjs"],
   });
   
   // Fix CommonJS export: esbuild génère parfois `0 && (module.exports = {...})`

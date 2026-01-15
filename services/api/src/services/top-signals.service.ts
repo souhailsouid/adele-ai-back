@@ -7,7 +7,7 @@
  * - Priorité aux CEO, CFO, Director
  */
 
-import { insertRowsS3 } from '../athena/write';
+// Import lazy pour éviter de charger parquetjs si non nécessaire (routes read-only)
 
 export interface TopInsiderSignal {
   id: number;
@@ -158,6 +158,8 @@ export async function insertTopSignals(signals: TopInsiderSignal[]): Promise<voi
   }));
 
   try {
+    // Import lazy pour éviter de charger parquetjs si non nécessaire
+    const { insertRowsS3 } = await import('../athena/write');
     const result = await insertRowsS3('top_insider_signals', toInsert);
     console.log(`[Top Signals] ✅ Successfully wrote ${signals.length} top signals to S3: ${result.s3Key}`);
   } catch (error: any) {

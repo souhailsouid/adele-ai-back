@@ -79,9 +79,16 @@ export const handler = async (event: SQSEvent) => {
       console.error(`Error processing message ${record.messageId}:`, error);
       errors.push({ messageId: record.messageId, error });
       
-      // Si erreur récupérable, republier avec retry
+      // ⚠️ CORRECTION BOUCLE RÉCURSIVE: Ne pas republier automatiquement
+      // Laisser SQS gérer les retries avec son mécanisme natif (redrive policy)
+      // Si on republie manuellement, on crée une boucle infinie
+      
+      // Pour les erreurs 429 (rate limit), on laisse SQS retry automatiquement
+      // Le message reviendra dans la queue après visibility_timeout
+      // Si ça échoue 3 fois, il ira dans la DLQ (configuré dans Terraform)
       if (error.message?.includes('429') || error.message?.includes('rate limit')) {
-        await republishWithDelay(record.body, 1000); // Retry après 1 seconde
+        console.warn(`Rate limit hit for message ${record.messageId}. SQS will retry automatically.`);
+        // Ne PAS republier manuellement - laisser SQS gérer
       }
     }
   }
@@ -789,24 +796,18 @@ async function updateFilingStatus(filingId: number, status: string): Promise<voi
 }
 
 /**
- * Republier un message avec delay
+ * ⚠️ FONCTION DÉSACTIVÉE - ÉVITE LES BOUCLES RÉCURSIVES
+ * 
+ * Ne pas republier manuellement les messages dans la queue.
+ * Laisser SQS gérer les retries avec son mécanisme natif:
+ * - visibility_timeout: le message revient après timeout
+ * - maxReceiveCount: après 3 échecs, va dans DLQ
+ * 
+ * Si on republie manuellement, on crée une boucle infinie Lambda → SQS → Lambda
  */
 async function republishWithDelay(messageBody: string, delaySeconds: number): Promise<void> {
-  if (!FORM4_PARSER_QUEUE_URL) {
-    console.warn("FORM4_PARSER_QUEUE_URL not set, cannot republish");
-    return;
-  }
-
-  try {
-    await sqsClient.send(new SendMessageCommand({
-      QueueUrl: FORM4_PARSER_QUEUE_URL,
-      MessageBody: messageBody,
-      DelaySeconds: Math.min(delaySeconds, 900), // Max 15 minutes
-    }));
-    console.log(`Republished message with ${delaySeconds}s delay`);
-  } catch (error: any) {
-    console.error("Error republishing message:", error);
-  }
+  console.warn("⚠️ republishWithDelay is disabled to prevent recursive loops. SQS will handle retries automatically.");
+  // Ne rien faire - laisser SQS gérer les retries
 }
 
 function sleep(ms: number): Promise<void> {

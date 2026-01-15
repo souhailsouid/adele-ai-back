@@ -1,0 +1,9 @@
+{
+  "name": "parquetjs-layer",
+  "version": "1.0.0",
+  "description": "Lambda Layer for parquetjs library",
+  "scripts": {
+    "build": "cd nodejs && npm install && cd .. && zip -r parquetjs-layer.zip nodejs",
+    "clean": "rm -rf nodejs/node_modules nodejs/package-lock.json parquetjs-layer.zip"
+  }
+}

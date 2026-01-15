@@ -99,14 +99,14 @@ export class InsidersService {
 
     const results = await executeAthenaQuery(query);
     
-    const trending: TrendingInsider[] = results.map((row: any[]) => ({
-      ticker: row[0] || '',
-      company_name: row[1] || '',
-      total_buy_value: parseFloat(row[2] || '0'),
-      total_sell_value: parseFloat(row[3] || '0'),
-      net_value: parseFloat(row[4] || '0'),
-      transaction_count: parseInt(row[5] || '0', 10),
-      last_transaction_date: row[6] || '',
+    const trending: TrendingInsider[] = results.map((row: any) => ({
+      ticker: row.ticker || '',
+      company_name: row.company_name || '',
+      total_buy_value: parseFloat(row.total_buy_value || '0'),
+      total_sell_value: parseFloat(row.total_sell_value || '0'),
+      net_value: parseFloat(row.net_value || '0'),
+      transaction_count: parseInt(row.transaction_count || '0', 10),
+      last_transaction_date: row.last_transaction_date || '',
     }));
 
     // Mettre en cache (TTL 1 heure pour trending)
@@ -183,23 +183,23 @@ export class InsidersService {
 
     const results = await executeAthenaQuery(query);
     
-    const transactions: InsiderTransaction[] = results.map((row: any[]) => ({
-      id: parseInt(row[0] || '0', 10),
-      company_id: row[1] ? parseInt(row[1], 10) : null,
-      filing_id: row[2] ? parseInt(row[2], 10) : null,
-      insider_name: row[3] || null,
-      insider_cik: row[4] || null,
-      insider_title: row[5] || null,
-      relation: row[6] || null,
-      transaction_type: row[7] || null,
-      shares: row[8] ? parseInt(row[8], 10) : null,
-      price_per_share: row[9] ? parseFloat(row[9]) : null,
-      total_value: row[10] ? parseFloat(row[10]) : null,
-      transaction_date: row[11] || null,
-      alert_flag: row[12] === true || row[12] === 'true',
-      created_at: row[13] || null,
-      ticker: row[14] || ticker,
-      company_name: row[15] || null,
+    const transactions: InsiderTransaction[] = results.map((row: any) => ({
+      id: parseInt(row.id || '0', 10),
+      company_id: row.company_id ? parseInt(row.company_id, 10) : null,
+      filing_id: row.filing_id ? parseInt(row.filing_id, 10) : null,
+      insider_name: row.insider_name || null,
+      insider_cik: row.insider_cik || null,
+      insider_title: row.insider_title || null,
+      relation: row.relation || null,
+      transaction_type: row.transaction_type || null,
+      shares: row.shares ? parseInt(row.shares, 10) : null,
+      price_per_share: row.price_per_share ? parseFloat(row.price_per_share) : null,
+      total_value: row.total_value ? parseFloat(row.total_value) : null,
+      transaction_date: row.transaction_date || null,
+      alert_flag: row.alert_flag === true || row.alert_flag === 'true',
+      created_at: row.created_at || null,
+      ticker: row.ticker || ticker,
+      company_name: row.company_name || null,
     }));
 
     // Mettre en cache (TTL 30 minutes)
@@ -243,7 +243,9 @@ export class InsidersService {
       return null;
     }
 
-    const stats = statsResults[0];
+    if (statsResults.length === 0) {
+      return null;
+    }
     
     // Requête pour les entreprises par insider
     const companiesQuery = `
@@ -263,19 +265,20 @@ export class InsidersService {
 
     const companiesResults = await executeAthenaQuery(companiesQuery);
     
+    const statsRow = statsResults[0];
     const record: InsiderPersonRecord = {
-      insider_cik: stats[0] || insiderCik,
-      insider_name: stats[1] || null,
-      total_companies: parseInt(stats[2] || '0', 10),
-      total_buy_value: parseFloat(stats[3] || '0'),
-      total_sell_value: parseFloat(stats[4] || '0'),
-      net_value: parseFloat(stats[5] || '0'),
-      transaction_count: parseInt(stats[6] || '0', 10),
-      companies: companiesResults.map((row: any[]) => ({
-        ticker: row[0] || '',
-        company_name: row[1] || '',
-        transaction_count: parseInt(row[2] || '0', 10),
-        net_value: parseFloat(row[3] || '0'),
+      insider_cik: statsRow?.insider_cik || insiderCik,
+      insider_name: statsRow?.insider_name || null,
+      total_companies: parseInt(statsRow?.total_companies || '0', 10),
+      total_buy_value: parseFloat(statsRow?.total_buy_value || '0'),
+      total_sell_value: parseFloat(statsRow?.total_sell_value || '0'),
+      net_value: parseFloat(statsRow?.net_value || '0'),
+      transaction_count: parseInt(statsRow?.transaction_count || '0', 10),
+      companies: companiesResults.map((row: any) => ({
+        ticker: row.ticker || '',
+        company_name: row.company_name || '',
+        transaction_count: parseInt(row.transaction_count || '0', 10),
+        net_value: parseFloat(row.net_value || '0'),
       })),
     };
 
@@ -333,26 +336,26 @@ export class InsidersService {
 
     const results = await executeAthenaQuery(query);
     
-    const signals = results.map((row: any[]) => ({
-      id: parseInt(row[0] || '0', 10),
-      company_id: row[1] ? parseInt(row[1], 10) : null,
-      filing_id: row[2] ? parseInt(row[2], 10) : null,
-      insider_name: row[3] || null,
-      insider_cik: row[4] || null,
-      insider_title: row[5] || null,
-      relation: row[6] || null,
-      transaction_type: row[7] || null,
-      shares: row[8] ? parseInt(row[8], 10) : null,
-      price_per_share: row[9] ? parseFloat(row[9]) : null,
-      total_value: row[10] ? parseFloat(row[10]) : null,
-      transaction_date: row[11] || null,
-      signal_score: row[12] ? parseInt(row[12], 10) : null,
-      created_at: row[13] || null,
-      ticker: row[14] || null,
-      company_name: row[15] || null,
-      accession_number: row[16] || null,
-      filing_date: row[17] || null,
-      sec_url: row[16] && row[4] ? `https://www.sec.gov/cgi-bin/viewer?action=view&cik=${row[4]}&accession_number=${row[16]}&xbrl_type=v` : null,
+    const signals = results.map((row: any) => ({
+      id: parseInt(row.id || '0', 10),
+      company_id: row.company_id ? parseInt(row.company_id, 10) : null,
+      filing_id: row.filing_id ? parseInt(row.filing_id, 10) : null,
+      insider_name: row.insider_name || null,
+      insider_cik: row.insider_cik || null,
+      insider_title: row.insider_title || null,
+      relation: row.relation || null,
+      transaction_type: row.transaction_type || null,
+      shares: row.shares ? parseInt(row.shares, 10) : null,
+      price_per_share: row.price_per_share ? parseFloat(row.price_per_share) : null,
+      total_value: row.total_value ? parseFloat(row.total_value) : null,
+      transaction_date: row.transaction_date || null,
+      signal_score: row.signal_score ? parseInt(row.signal_score, 10) : null,
+      created_at: row.created_at || null,
+      ticker: row.ticker || null,
+      company_name: row.company_name || null,
+      accession_number: row.accession_number || null,
+      filing_date: row.filing_date || null,
+      sec_url: row.accession_number && row.insider_cik ? `https://www.sec.gov/cgi-bin/viewer?action=view&cik=${row.insider_cik}&accession_number=${row.accession_number}&xbrl_type=v` : null,
     }));
 
     // Mettre en cache (TTL 5 minutes pour hot signals)

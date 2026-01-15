@@ -39,6 +39,9 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [aws_cloudwatch_log_group.api_lambda]
 
+  # Lambda Layer pour parquetjs (évite de bundler une dépendance lourde)
+  layers = [aws_lambda_layer_version.parquetjs_layer.arn]
+
   environment {
     variables = {
       SUPABASE_URL           = var.supabase_url

@@ -8,7 +8,8 @@ import { getFundByIdAthena, getFundsAthena, getFundByCikAthena } from "./athena/
 import { getFundFilingsAthena, getFundFilingByIdAthena } from "./athena/fund_filings";
 import { getFundDiffsAthena } from "./athena/fund_holdings_diff";
 import { getAllFundsRecentChangesAthena } from "./athena/market_pulse";
-import { insertRowS3 } from "./athena/write";
+// Import lazy pour éviter de charger parquetjs si non nécessaire
+// import { insertRowS3 } from "./athena/write";
 
 export { getTickerFundsChanges, getMarketPulse, getPulseFeed };
 export { analyzeFundDiffsStrategically } from "./services/fund-strategic-analysis.service";
