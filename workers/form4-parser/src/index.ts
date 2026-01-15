@@ -19,6 +19,73 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+// Helper pour exécuter des requêtes Athena
+async function executeAthenaQuery(query: string): Promise<any[]> {
+  const queryExecution = await athenaClient.send(new StartQueryExecutionCommand({
+    QueryString: query,
+    QueryExecutionContext: {
+      Database: ATHENA_DATABASE,
+    },
+    ResultConfiguration: {
+      OutputLocation: `s3://${ATHENA_RESULTS_BUCKET}/query-results/`,
+    },
+    WorkGroup: ATHENA_WORK_GROUP,
+  }));
+
+  const queryExecutionId = queryExecution.QueryExecutionId;
+  if (!queryExecutionId) {
+    throw new Error('Failed to start Athena query');
+  }
+
+  // Attendre que la requête soit terminée
+  let status = 'RUNNING';
+  while (status === 'RUNNING' || status === 'QUEUED') {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const statusResult = await athenaClient.send(new GetQueryExecutionCommand({
+      QueryExecutionId: queryExecutionId,
+    }));
+    status = statusResult.QueryExecution?.Status?.State || 'FAILED';
+    
+    if (status === 'FAILED' || status === 'CANCELLED') {
+      throw new Error(`Athena query failed: ${statusResult.QueryExecution?.Status?.StateChangeReason || 'Unknown error'}`);
+    }
+  }
+
+  // Récupérer les résultats
+  const results: any[] = [];
+  let nextToken: string | undefined;
+  
+  do {
+    const resultResponse = await athenaClient.send(new GetQueryResultsCommand({
+      QueryExecutionId: queryExecutionId,
+      NextToken: nextToken,
+    }));
+
+    const rows = resultResponse.ResultSet?.Rows || [];
+    const columnInfo = resultResponse.ResultSet?.ResultSetMetadata?.ColumnInfo || [];
+    
+    // Skip header row
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const rowData: any = {};
+      
+      if (row.Data) {
+        for (let j = 0; j < columnInfo.length; j++) {
+          const column = columnInfo[j];
+          const value = row.Data[j]?.VarCharValue;
+          rowData[column.Name || `col${j}`] = value || null;
+        }
+      }
+      
+      results.push(rowData);
+    }
+    
+    nextToken = resultResponse.NextToken;
+  } while (nextToken);
+
+  return results;
+}
+
 // Configuration
 const ATHENA_DATABASE = process.env.ATHENA_DATABASE || "adel_ai_dev";
 const ATHENA_WORK_GROUP = process.env.ATHENA_WORK_GROUP || "adel-ai-dev-workgroup";
@@ -603,6 +670,96 @@ async function flushTransactionBuffer(): Promise<void> {
     
     console.log(`[S3 Write] ✅ Flushed ${allTransactions.length} transactions to S3 Parquet`);
     
+    // Filtrer et insérer les Top Signals (Golden Filter)
+    try {
+      const topSignals = filterTopSignals(allTransactions);
+      
+      if (topSignals.length > 0) {
+        // Dédupliquer les signals avant insertion (même insider, même date, même montant)
+        const uniqueSignals = new Map<string, any>();
+        for (const signal of topSignals) {
+          const key = `${signal.insider_name}|${signal.company_id}|${signal.transaction_date}|${signal.total_value}`;
+          if (!uniqueSignals.has(key)) {
+            uniqueSignals.set(key, signal);
+          } else {
+            console.log(`[Top Signals] ⚠️ Duplicate signal skipped: ${signal.insider_name} - ${signal.transaction_date} - $${signal.total_value}`);
+          }
+        }
+        
+        const deduplicatedSignals = Array.from(uniqueSignals.values());
+        if (deduplicatedSignals.length < topSignals.length) {
+          console.log(`[Top Signals] Deduplicated: ${topSignals.length} → ${deduplicatedSignals.length} signals`);
+        }
+        
+        await insertTopSignals(deduplicatedSignals);
+        console.log(`[Top Signals] ✅ Filtered ${topSignals.length} top signals from ${allTransactions.length} transactions`);
+        
+        // Envoyer des alertes Telegram si configuré
+        const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+        const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+        const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+        
+        if ((TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) || DISCORD_WEBHOOK_URL) {
+          try {
+            // Enrichir les signals avec les infos de company
+            const enrichedSignals = await Promise.all(
+              topSignals.map(async (signal) => {
+                try {
+                  // Récupérer ticker et company_name depuis companies
+                  const companyQuery = `
+                    SELECT ticker, name 
+                    FROM companies 
+                    WHERE id = ${signal.company_id} 
+                    LIMIT 1
+                  `;
+                  const companyResults = await executeAthenaQuery(companyQuery);
+                  const company = companyResults[0] || {};
+                  
+                  // Récupérer accession_number depuis company_filings
+                  const filingQuery = `
+                    SELECT accession_number 
+                    FROM company_filings 
+                    WHERE id = ${signal.filing_id} 
+                    LIMIT 1
+                  `;
+                  const filingResults = await executeAthenaQuery(filingQuery);
+                  const filing = filingResults[0] || {};
+                  
+                  return {
+                    ...signal,
+                    ticker: company.ticker || undefined,
+                    company_name: company.name || undefined,
+                    accession_number: filing.accession_number || undefined,
+                  };
+                } catch (error: any) {
+                  console.warn(`[Top Signals] Error enriching signal ${signal.id}:`, error.message);
+                  return {
+                    ...signal,
+                    ticker: undefined,
+                    company_name: undefined,
+                    accession_number: undefined,
+                  };
+                }
+              })
+            );
+            
+            const result = await sendTopSignalAlerts(enrichedSignals, {
+              telegramBotToken: TELEGRAM_BOT_TOKEN,
+              telegramChatId: TELEGRAM_CHAT_ID,
+              discordWebhookUrl: DISCORD_WEBHOOK_URL,
+            });
+            console.log(`[Top Signals] ✅ Sent ${result.sent} alerts (${result.failed} failed)`);
+          } catch (error: any) {
+            console.error(`[Top Signals] ⚠️ Error sending alerts:`, error.message);
+            // Ne pas faire échouer l'insertion si les alertes échouent
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error(`[Top Signals] ⚠️ Error filtering top signals:`, error.message);
+      // Ne pas faire échouer l'insertion principale si le filtrage échoue
+    }
+    
     // Écrire les transactions importantes dans DynamoDB (cache rapide)
     await writeImportantTransactionsToDynamoDB(allTransactions);
     
@@ -808,6 +965,253 @@ async function updateFilingStatus(filingId: number, status: string): Promise<voi
 async function republishWithDelay(messageBody: string, delaySeconds: number): Promise<void> {
   console.warn("⚠️ republishWithDelay is disabled to prevent recursive loops. SQS will handle retries automatically.");
   // Ne rien faire - laisser SQS gérer les retries
+}
+
+/**
+ * Filtrer les Top Signals selon les critères "Golden Filter"
+ * - Purchase uniquement (Code P)
+ * - Montant > 50 000$
+ * - Priorité aux CEO, CFO, Director, President, Chairman, COO
+ */
+function filterTopSignals(transactions: any[]): any[] {
+  const topSignals: any[] = [];
+  
+  for (const tx of transactions) {
+    // Critère 1: Purchase uniquement
+    const transactionType = (tx.transaction_type || '').toLowerCase();
+    if (!['purchase', 'buy', 'p'].includes(transactionType)) {
+      continue;
+    }
+    
+    // Critère 2: Montant > 50 000$
+    if (!tx.total_value || tx.total_value < 50000) {
+      continue;
+    }
+    
+    // Critère 3: Priorité aux rôles importants
+    const relation = (tx.relation || tx.insider_title || '').toLowerCase();
+    const isPriorityRole = [
+      'ceo', 'chief executive officer',
+      'cfo', 'chief financial officer',
+      'director',
+      'president',
+      'chairman', 'chairman of the board',
+      'coo', 'chief operating officer'
+    ].some(role => relation.includes(role));
+    
+    // Calculer le score (1-10)
+    let score = 5; // Base
+    if (isPriorityRole) {
+      score += 3; // +3 pour rôle prioritaire
+    }
+    if (tx.total_value > 1000000) {
+      score += 2; // +2 pour > 1M$
+    } else if (tx.total_value > 500000) {
+      score += 1; // +1 pour > 500k$
+    }
+    
+    topSignals.push({
+      company_id: tx.company_id,
+      filing_id: tx.filing_id,
+      insider_name: tx.insider_name,
+      insider_cik: tx.insider_cik,
+      insider_title: tx.insider_title || tx.relation,
+      relation: tx.relation,
+      transaction_type: tx.transaction_type,
+      shares: tx.shares,
+      price_per_share: tx.price_per_share,
+      total_value: tx.total_value,
+      transaction_date: tx.transaction_date,
+      signal_score: Math.min(score, 10), // Max 10
+      created_at: tx.created_at || new Date().toISOString(),
+    });
+  }
+  
+  return topSignals;
+}
+
+/**
+ * Insérer les Top Signals dans S3 Parquet
+ */
+async function insertTopSignals(signals: any[]): Promise<void> {
+  if (signals.length === 0) {
+    return;
+  }
+
+  console.log(`[Top Signals] Inserting ${signals.length} top signals to S3...`);
+
+  // Grouper par partition (year/month)
+  const signalsByPartition = new Map<string, any[]>();
+  
+  for (const signal of signals) {
+    const date = new Date(signal.transaction_date || signal.created_at);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const partitionKey = `${year}-${month.toString().padStart(2, '0')}`;
+    
+    if (!signalsByPartition.has(partitionKey)) {
+      signalsByPartition.set(partitionKey, []);
+    }
+    signalsByPartition.get(partitionKey)!.push(signal);
+  }
+
+  // Écrire chaque partition
+  for (const [partitionKey, partitionSignals] of signalsByPartition) {
+    const [year, month] = partitionKey.split('-');
+    const s3Key = `data/top_insider_signals/year=${year}/month=${month}/data-${Date.now()}.parquet`;
+    
+    // Créer un fichier Parquet temporaire
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, `top_signals_${Date.now()}.parquet`);
+    
+    const TOP_SIGNALS_SCHEMA = new ParquetSchema({
+      company_id: { type: 'INT64', optional: true },
+      filing_id: { type: 'INT64', optional: true },
+      insider_name: { type: 'UTF8', optional: true },
+      insider_cik: { type: 'UTF8', optional: true },
+      insider_title: { type: 'UTF8', optional: true },
+      relation: { type: 'UTF8', optional: true },
+      transaction_type: { type: 'UTF8', optional: true },
+      shares: { type: 'INT64', optional: true },
+      price_per_share: { type: 'DOUBLE', optional: true },
+      total_value: { type: 'DOUBLE', optional: true },
+      transaction_date: { type: 'DATE', optional: true },
+      signal_score: { type: 'INT32', optional: true },
+      created_at: { type: 'TIMESTAMP_MILLIS', optional: true },
+    });
+    
+    const writer = await ParquetWriter.openFile(TOP_SIGNALS_SCHEMA, tempFilePath);
+    
+    for (const signal of partitionSignals) {
+      await writer.appendRow({
+        ...signal,
+        created_at: signal.created_at ? new Date(signal.created_at).getTime() : Date.now(),
+      });
+    }
+    
+    await writer.close();
+    
+    // Upload vers S3
+    const fileBuffer = fs.readFileSync(tempFilePath);
+    await s3Client.send(new PutObjectCommand({
+      Bucket: S3_DATA_LAKE_BUCKET,
+      Key: s3Key,
+      Body: fileBuffer,
+      ContentType: 'application/octet-stream',
+    }));
+    
+    // Nettoyer le fichier temporaire
+    fs.unlinkSync(tempFilePath);
+    
+    console.log(`[Top Signals] ✅ Wrote ${partitionSignals.length} signals to ${s3Key}`);
+  }
+}
+
+/**
+ * Envoyer des alertes Telegram/Discord pour les Top Signals
+ */
+async function sendTopSignalAlerts(
+  signals: Array<any & { ticker?: string; company_name?: string; accession_number?: string }>,
+  config: { telegramBotToken?: string; telegramChatId?: string; discordWebhookUrl?: string }
+): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+
+  for (const signal of signals) {
+    try {
+      // Telegram
+      if (config.telegramBotToken && config.telegramChatId) {
+        const message = formatSignalForTelegram(signal);
+        const url = `https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: config.telegramChatId,
+            text: message,
+            parse_mode: 'Markdown',
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Telegram API failed: ${error.description || response.statusText}`);
+        }
+
+        console.log(`[Signal Alerts] ✅ Telegram alert sent for ${signal.ticker || 'N/A'}`);
+        sent++;
+      }
+
+      // Discord
+      if (config.discordWebhookUrl) {
+        const message = formatSignalForDiscord(signal);
+        const response = await fetch(config.discordWebhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: message,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Discord webhook failed: ${response.status} ${response.statusText}`);
+        }
+
+        console.log(`[Signal Alerts] ✅ Discord alert sent for ${signal.ticker || 'N/A'}`);
+        sent++;
+      }
+    } catch (error: any) {
+      console.error(`[Signal Alerts] Failed to send alert for signal ${signal.id}:`, error.message);
+      failed++;
+    }
+  }
+
+  return { sent, failed };
+}
+
+/**
+ * Formater un Top Signal pour Telegram
+ */
+function formatSignalForTelegram(signal: any & { ticker?: string; company_name?: string; accession_number?: string }): string {
+  const secUrl = signal.accession_number && signal.insider_cik
+    ? `https://www.sec.gov/cgi-bin/viewer?action=view&cik=${signal.insider_cik}&accession_number=${signal.accession_number}&xbrl_type=v`
+    : null;
+
+  return `🔥 *TOP INSIDER SIGNAL DETECTED*
+
+*${signal.ticker || 'N/A'}* - ${signal.company_name || 'Unknown Company'}
+👤 *${signal.insider_name}* (${signal.insider_title || signal.relation || 'N/A'})
+📊 *${(signal.transaction_type || '').toUpperCase()}* - ${signal.shares?.toLocaleString() || 'N/A'} shares @ $${signal.price_per_share?.toFixed(2) || '0.00'}
+💰 *Total: $${signal.total_value?.toLocaleString() || '0'}*
+⭐ *Score: ${signal.signal_score}/10*
+📅 Date: ${signal.transaction_date || 'N/A'}
+
+${secUrl ? `📄 [View SEC Filing](${secUrl})` : ''}`;
+}
+
+/**
+ * Formater un Top Signal pour Discord
+ */
+function formatSignalForDiscord(signal: any & { ticker?: string; company_name?: string; accession_number?: string }): string {
+  const secUrl = signal.accession_number && signal.insider_cik
+    ? `https://www.sec.gov/cgi-bin/viewer?action=view&cik=${signal.insider_cik}&accession_number=${signal.accession_number}&xbrl_type=v`
+    : null;
+
+  return `🔥 **TOP INSIDER SIGNAL DETECTED**
+
+**${signal.ticker || 'N/A'}** - ${signal.company_name || 'Unknown Company'}
+👤 **${signal.insider_name}** (${signal.insider_title || signal.relation || 'N/A'})
+📊 **${(signal.transaction_type || '').toUpperCase()}** - ${signal.shares?.toLocaleString() || 'N/A'} shares @ $${signal.price_per_share?.toFixed(2) || '0.00'}
+💰 **Total: $${signal.total_value?.toLocaleString() || '0'}**
+⭐ **Score: ${signal.signal_score}/10**
+📅 Date: ${signal.transaction_date || 'N/A'}
+
+${secUrl ? `📄 [View SEC Filing](${secUrl})` : ''}`;
 }
 
 function sleep(ms: number): Promise<void> {

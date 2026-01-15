@@ -8,6 +8,7 @@
  */
 
 import { insertRowsS3 } from '../athena/write';
+import { executeAthenaQuery } from '../athena/query';
 import { filterTopSignals, insertTopSignals } from './top-signals.service';
 import { alertTopSignals } from './signal-alerts.service';
 
@@ -510,12 +511,47 @@ async function insertInsiderTransactions(
       if (alertConfig.discordWebhookUrl || (alertConfig.telegramBotToken && alertConfig.telegramChatId)) {
         try {
           // Enrichir les signals avec les infos de company (pour l'affichage)
-          const enrichedSignals = topSignals.map(signal => ({
-            ...signal,
-            ticker: undefined, // Sera enrichi plus tard si nécessaire
-            company_name: undefined,
-            accession_number: undefined,
-          }));
+          // Récupérer les infos depuis Athena pour enrichir les signals
+          const enrichedSignals = await Promise.all(
+            topSignals.map(async (signal) => {
+              try {
+                // Récupérer ticker et company_name depuis companies
+                const companyQuery = `
+                  SELECT ticker, name 
+                  FROM companies 
+                  WHERE id = ${signal.company_id} 
+                  LIMIT 1
+                `;
+                const companyResults = await executeAthenaQuery(companyQuery);
+                const company = companyResults[0] || {};
+                
+                // Récupérer accession_number depuis company_filings
+                const filingQuery = `
+                  SELECT accession_number 
+                  FROM company_filings 
+                  WHERE id = ${signal.filing_id} 
+                  LIMIT 1
+                `;
+                const filingResults = await executeAthenaQuery(filingQuery);
+                const filing = filingResults[0] || {};
+                
+                return {
+                  ...signal,
+                  ticker: company.ticker || undefined,
+                  company_name: company.name || undefined,
+                  accession_number: filing.accession_number || undefined,
+                };
+              } catch (error: any) {
+                console.warn(`[Form4 Parser] Error enriching signal ${signal.id}:`, error.message);
+                return {
+                  ...signal,
+                  ticker: undefined,
+                  company_name: undefined,
+                  accession_number: undefined,
+                };
+              }
+            })
+          );
 
           const result = await alertTopSignals(enrichedSignals, alertConfig);
           console.log(`[Form4 Parser] ✅ Sent ${result.sent} alerts (${result.failed} failed)`);
