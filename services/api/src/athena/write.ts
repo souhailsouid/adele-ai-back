@@ -5,12 +5,14 @@
  */
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import * as parquetjs from 'parquetjs';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { createRequire } from 'module';
 
-// Extraire les classes depuis le module parquetjs
+// parquetjs est un module CommonJS, on doit utiliser require
+const require = createRequire(import.meta.url);
+const parquetjs = require('parquetjs');
 const { ParquetSchema, ParquetWriter } = parquetjs;
 
 const s3Client = new S3Client({
@@ -282,6 +284,33 @@ export async function writeToS3Parquet(
     if (parquetRow.updated_at) {
       parquetRow.updated_at = toTimestampMillis(parquetRow.updated_at);
     }
+    
+    // Convertir transaction_date (string YYYY-MM-DD) en objet Date pour Parquet
+    if (parquetRow.transaction_date && typeof parquetRow.transaction_date === 'string') {
+      // Parquet DATE attend un objet Date JavaScript
+      const dateStr = parquetRow.transaction_date.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        // Format YYYY-MM-DD valide, convertir en Date (UTC pour éviter les problèmes de timezone)
+        const [year, month, day] = dateStr.split('-').map(Number);
+        if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          // Utiliser UTC pour éviter les décalages de timezone
+          parquetRow.transaction_date = new Date(Date.UTC(year, month - 1, day));
+        } else {
+          console.warn(`[writeToS3Parquet] Invalid date: ${dateStr}, using current date`);
+          parquetRow.transaction_date = new Date();
+        }
+      } else {
+        // Essayer de parser avec Date
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          parquetRow.transaction_date = date;
+        } else {
+          console.warn(`[writeToS3Parquet] Could not parse date: ${dateStr}, using current date`);
+          parquetRow.transaction_date = new Date();
+        }
+      }
+    }
+    
     if (parquetRow.filing_date && typeof parquetRow.filing_date === 'string') {
       // Pour les dates, on garde le format string (Parquet gère DATE)
       // Mais on peut aussi convertir en timestamp si nécessaire

@@ -98,12 +98,31 @@ export async function parseForm4(
     const accNum = accessionNumber || 'unknown';
     console.log(`[Form4 Parser] Extracted ${transactions.length} transactions from Form 4 ${accNum}`);
     
+    // LOG DÉTAILLÉ AVANT INSERTION (pour diagnostic)
+    if (transactions.length > 0) {
+      console.log(`\n[Form4 Parser] 📊 DÉTAILS DES TRANSACTIONS (AVANT INSERTION):`);
+      transactions.forEach((t, i) => {
+        console.log(`\n  Transaction ${i + 1}:`);
+        console.log(`    - Insider: ${t.insider_name} (CIK: ${t.insider_cik || 'N/A'})`);
+        console.log(`    - Relation: ${t.relation}`);
+        console.log(`    - Type: ${t.transaction_type}`);
+        console.log(`    - Shares: ${t.shares}`);
+        console.log(`    - Price: $${t.price_per_share}`);
+        console.log(`    - Total: $${t.total_value}`);
+        console.log(`    - Date: ${t.transaction_date}`);
+        console.log(`    - Security: ${t.security_title || 'N/A'}`);
+        console.log(`    - Ownership: ${t.ownership_nature || 'N/A'}`);
+      });
+      console.log(`\n[Form4 Parser] ✅ ${transactions.length} transactions prêtes à être insérées`);
+    } else {
+      console.warn(`[Form4 Parser] ⚠️  No transactions extracted from Form 4 ${accNum}`);
+    }
+    
     // Insérer les transactions dans la base de données
     if (transactions.length > 0) {
-      console.log(`[Form4 Parser] Inserting ${transactions.length} transactions for company ${companyId}, filing ${filingId}...`);
+      console.log(`\n[Form4 Parser] 💾 Insertion dans la base de données...`);
       await insertInsiderTransactions(companyId, filingId, transactions);
-    } else {
-      console.warn(`[Form4 Parser] No transactions extracted from Form 4 ${accNum}`);
+      console.log(`[Form4 Parser] ✅ Insertion terminée`);
     }
 
     return transactions;
@@ -212,9 +231,17 @@ function parseForm4XML(xmlContent: string): InsiderTransaction[] {
     const relation = relationMatch ? relationMatch[1].trim() : 'Unknown';
 
     // Mettre à jour la relation pour toutes les transactions
+    // Décoder les entités HTML (&amp; -> &, etc.)
+    const cleanRelation = relation
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    
     transactions.forEach(t => {
       if (t.relation === 'Unknown') {
-        t.relation = relation;
+        t.relation = cleanRelation;
       }
     });
 
@@ -240,140 +267,60 @@ function parseTransactionBlock(
   type: 'stock' | 'derivative'
 ): InsiderTransaction | null {
   try {
-    // Supprimer les namespaces pour simplifier le parsing
+    // 1. Nettoyage des namespaces pour simplifier les Regex
     const cleanXml = transactionXml.replace(/<(\/?)([^:>]+):([^>]+)>/g, '<$1$3>');
     
-    /**
-     * Helper pour extraire une valeur numérique même si elle est profondément enfouie
-     * Cherche d'abord dans le parent (ex: transactionAmounts), puis dans tout le bloc
-     */
-    const getNumericValue = (parentTag: string, targetTag: string): number => {
-      // On cherche d'abord dans le parent (ex: transactionAmounts)
-      const parentRegex = new RegExp(`<${parentTag}[^>]*>([\\s\\S]*?)<\\/${parentTag}>`, 'i');
-      const parentMatch = cleanXml.match(parentRegex);
-      const contentToSearch = parentMatch ? parentMatch[1] : cleanXml;
-
-      // On cherche la balise cible avec ou sans <value>, gère les espaces/newlines
-      const targetRegex = new RegExp(`<${targetTag}[^>]*>(?:\\s*<value>)?\\s*([^<\\s]+)\\s*(?:<\\/value>)?\\s*<\\/${targetTag}>`, 'i');
-      const match = contentToSearch.match(targetRegex);
-      
+    // 2. Helper ultra-robuste pour extraire une valeur numérique
+    // Cette regex cherche la balise, ignore les <value> optionnels et capture le chiffre
+    // Elle gère aussi les espaces et les nouvelles lignes \s*
+    const extractNumeric = (tag: string): number => {
+      const regex = new RegExp(`<${tag}[^>]*>(?:\\s*<value>)?\\s*([^<\\s]+)\\s*(?:<\\/value>)?\\s*<\\/${tag}>`, 'i');
+      const match = cleanXml.match(regex);
       if (match) {
-        const val = match[1].trim().replace(/,/g, '');
-        // Ignorer si c'est un footnoteId
-        if (val.includes('footnoteId') || val.includes('<')) {
-          return 0;
-        }
-        const parsed = parseFloat(val);
-        return isNaN(parsed) ? 0 : parsed;
+        const val = match[1].replace(/,/g, ''); // Enlever les virgules américaines
+        return parseFloat(val) || 0;
       }
       return 0;
     };
 
-    /**
-     * Fonction générique pour extraire une valeur texte d'une balise XML
-     */
-    const getValue = (tag: string): string | null => {
-      // Format moderne: <tag><value>...</value></tag>
-      const regexWithValue = new RegExp(`<${tag}[^>]*>\\s*<value>([^<]+)<\\/value>\\s*<\\/${tag}>`, 'i');
-      let match = cleanXml.match(regexWithValue);
-      
-      // Format ancien: <tag>...</tag>
-      if (!match) {
-        const regexDirect = new RegExp(`<${tag}[^>]*>([^<]+)<\\/${tag}>`, 'i');
-        match = cleanXml.match(regexDirect);
-      }
-      
-      // Pour transactionCode, chercher aussi dans transactionCoding
-      if (!match && tag === 'transactionCode') {
-        const regexInCoding = new RegExp(`<transactionCoding[^>]*>[\\s\\S]*?<${tag}[^>]*>([^<]+)<\\/${tag}>`, 'i');
-        match = cleanXml.match(regexInCoding);
-      }
-      
-      return match ? match[1].trim() : null;
-    };
-
-    // 1. Extraire la date de transaction (OBLIGATOIRE)
-    const transactionDate = getValue('transactionDate') || 
-                            cleanXml.match(/<transactionDate[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1];
-    if (!transactionDate) {
-      console.warn(`[Form4 Parser] Transaction block missing transactionDate, skipping`);
-      return null;
-    }
-
-    // 2. Extraire le code de transaction
-    const transactionCode = getValue('transactionCode') || 
-                           cleanXml.match(/<transactionCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1] || '';
-    const transactionType = mapTransactionCode(transactionCode);
-
-    // 3. Extraire le nombre de shares (OBLIGATOIRE)
-    // Chercher d'abord dans transactionAmounts (format standard)
-    let shares = getNumericValue('transactionAmounts', 'transactionShares');
+    // 3. Extraction des données
+    const transactionDateMatch = cleanXml.match(/<transactionDate[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
+    const transactionDate = transactionDateMatch ? transactionDateMatch[1] : null;
     
-    // Si on est dans un bloc derivative (option) et que shares est 0, chercher underlyingSecurityShares
+    const transactionCodeMatch = cleanXml.match(/<transactionCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
+    const transactionCode = transactionCodeMatch ? transactionCodeMatch[1] : '';
+
+    // On cherche les shares. Si 0, on regarde si c'est une option (derivative)
+    let shares = extractNumeric('transactionShares');
     if (shares === 0 && type === 'derivative') {
-      shares = getNumericValue('underlyingSecurity', 'underlyingSecurityShares');
-      if (shares > 0) {
-        console.log(`[Form4 Parser] Found underlyingSecurityShares for derivative: ${shares}`);
-      }
+      shares = extractNumeric('underlyingSecurityShares');
     }
+
+    const price = extractNumeric('transactionPricePerShare');
+    const acquiredDisposedCode = cleanXml.match(/<transactionAcquiredDisposedCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1];
+
+    // 4. LOGIQUE DE REJET (Le point sensible)
+    if (!transactionDate) return null;
     
-    // Dernier fallback: chercher directement transactionShares sans wrapper
+    // On ne rejette QUE si les shares ET le prix sont à 0 (cas rare des erreurs SEC)
+    // Mais on accepte les shares > 0 avec prix 0 (Grants/Cadeaux)
     if (shares === 0) {
-      const directMatch = cleanXml.match(/<transactionShares[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
-      if (directMatch) {
-        const val = directMatch[1].trim().replace(/,/g, '');
-        if (!val.includes('footnoteId') && !val.includes('<')) {
-          const parsed = parseFloat(val);
-          if (!isNaN(parsed) && parsed > 0) {
-            shares = parsed;
-            console.log(`[Form4 Parser] Found shares using direct pattern: ${shares}`);
-          }
-        }
-      }
-    }
-    
-    // LOG DE DEBUG SI ÉCHEC
-    if (shares === 0 || isNaN(shares)) {
-      console.warn(`[Form4 Parser] Transaction block has no valid shares, skipping`);
-      console.warn(`[Form4 Parser] DEBUG - Bloc XML (first 300 chars):`, transactionXml.substring(0, 300));
+      console.warn(`[Form4 Parser] Skipping block: Shares=0. Date: ${transactionDate}`);
       return null;
     }
 
-    // 4. Extraire le prix par share (chercher dans transactionAmounts)
-    let pricePerShare = getNumericValue('transactionAmounts', 'transactionPricePerShare');
-    
-    // Fallback: chercher directement
-    if (pricePerShare === 0) {
-      const priceMatch = cleanXml.match(/<transactionPricePerShare[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
-      if (priceMatch) {
-        const val = priceMatch[1].trim().replace(/,/g, '');
-        if (!val.includes('footnoteId') && !val.includes('<')) {
-          const parsed = parseFloat(val);
-          if (!isNaN(parsed)) {
-            pricePerShare = parsed;
-          }
-        }
-      }
-    }
-
-    // 5. Extraire le code acquired/disposed
-    const acquiredDisposedCode = getValue('transactionAcquiredDisposedCode') || 
-                                cleanXml.match(/<transactionAcquiredDisposedCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1] || '';
-
-    // 6. Extraire le titre du security (optionnel)
-    const securityTitle = getValue('securityTitle') || undefined;
-
-    // 7. Calculer la valeur totale
-    const totalValue = shares * pricePerShare;
+    // 5. Extraire le titre du security (optionnel)
+    const securityTitleMatch = cleanXml.match(/<securityTitle[^>]*>(?:\s*<value>)?\s*([^<]+)/i);
+    const securityTitle = securityTitleMatch ? securityTitleMatch[1].trim() : undefined;
 
     return {
       insider_name: ownerName,
       insider_cik: ownerCik,
-      relation: 'Unknown', // Sera mis à jour plus tard
-      transaction_type: transactionType,
-      shares: Math.abs(shares), // Toujours positif
-      price_per_share: pricePerShare,
-      total_value: Math.abs(totalValue),
+      relation: 'Unknown', 
+      transaction_type: mapTransactionCode(transactionCode),
+      shares: Math.abs(shares),
+      price_per_share: price,
+      total_value: Math.abs(shares * price),
       transaction_date: validateAndFormatDate(transactionDate),
       security_title: securityTitle,
       ownership_nature: acquiredDisposedCode === 'A' ? 'Direct' : 'Indirect',
@@ -408,26 +355,17 @@ function parseTransactionBlock(
  * - J = Other (Autre - Souvent transfert de trust - Signal nul)
  */
 function mapTransactionCode(code: string): string {
-  const codeMap: Record<string, string> = {
-    // Signal fort - Smart Money
-    'P': 'Purchase',      // ACHAT OPEN MARKET (Signal ++++)
-    'S': 'Sale',          // VENTE OPEN MARKET (Signal -)
-    
-    // Signal moyen - Exercices/Conversions
-    'M': 'Exercise',      // Exercice d'options (Signal neutre)
-    'C': 'Conversion',   // Conversion d'un titre dérivé (Signal neutre)
-    
-    // Signal faible - Mouvements automatiques
-    'A': 'Grant',         // Attribution gratuite (Signal neutre)
-    'D': 'Disposition',   // Disposition à l'émetteur (Signal nul)
-    'F': 'Payment',       // Paiement d'exercice / Tax Payment (Signal nul)
-    'I': 'Discretionary', // Transaction discrétionnaire (Signal variable)
-    'X': 'Exercise OTM',  // Exercice d'options OTM (Signal nul)
-    'G': 'Gift',          // Don (Signal nul)
-    'J': 'Other',         // Autre (Souvent transfert de trust - Signal nul)
+  const mapping: Record<string, string> = {
+    'P': 'Purchase',      // Achat Open Market (LE SEUL VRAI SIGNAL)
+    'S': 'Sale',          // Vente Open Market
+    'M': 'Exercise',      // Conversion d'options en actions
+    'C': 'Conversion',    // Conversion d'un titre dérivé
+    'A': 'Grant',         // Actions gratuites données par la boîte
+    'G': 'Gift',          // Cadeau (Donation)
+    'F': 'Tax Payment',   // Vente forcée pour payer les impôts
+    'J': 'Other'          // Mouvements divers (souvent trusts)
   };
-
-  return codeMap[code.toUpperCase()] || `Other (${code})`;
+  return mapping[code.toUpperCase()] || `Other (${code})`;
 }
 
 /**
@@ -485,7 +423,18 @@ function validateAndFormatDate(dateStr: string): string {
  * Purchase -> buy, Sale -> sell, etc.
  */
 function normalizeTransactionType(type: string): string {
-  const normalized = type.toLowerCase();
+  if (!type || !type.trim()) {
+    return 'other';
+  }
+  
+  const normalized = type.toLowerCase().trim();
+  
+  // Si c'est déjà normalisé (buy, sell), retourner tel quel
+  if (normalized === 'buy' || normalized === 'sell') {
+    return normalized;
+  }
+  
+  // Mapper depuis les valeurs Form 4 (Purchase, Sale, etc.)
   const typeMap: Record<string, string> = {
     'purchase': 'buy',
     'sale': 'sell',
@@ -496,15 +445,21 @@ function normalizeTransactionType(type: string): string {
     'gift': 'gift',
     'disposition': 'disposition',
     'discretionary': 'discretionary',
+    'other': 'other',
+    // Gérer aussi les codes bruts si jamais ils passent
+    'p': 'buy',
+    's': 'sell',
+    'm': 'exercise',
+    'c': 'conversion',
+    'a': 'grant',
+    'd': 'disposition',
+    'f': 'payment',
+    'g': 'gift',
+    'j': 'other',
   };
   
-  // Si c'est déjà normalisé (buy, sell), retourner tel quel
-  if (normalized === 'buy' || normalized === 'sell') {
-    return normalized;
-  }
-  
-  // Sinon, mapper depuis les valeurs Form 4
-  return typeMap[normalized] || normalized;
+  // Mapper depuis les valeurs Form 4
+  return typeMap[normalized] || 'other';
 }
 
 async function insertInsiderTransactions(
@@ -614,12 +569,14 @@ export async function parseForm4FromUrl(
   cik: string,
   primaryDocument?: string
 ): Promise<InsiderTransaction[]> {
-  const cikNumber = cik.replace(/^0+/, ''); // Enlever les zéros initiaux
-  const accessionClean = accessionNumber.replace(/-/g, ''); // Enlever les tirets
+  // IMPORTANT: La SEC EDGAR nécessite le CIK avec les zéros initiaux (10 chiffres)
+  // Exemple: 0001127602 (pas 1127602)
+  const cikPadded = cik.padStart(10, '0'); // S'assurer que le CIK a 10 chiffres avec zéros initiaux
+  const accessionClean = accessionNumber.replace(/-/g, ''); // Enlever les tirets pour le chemin
   
   // PRIORITÉ ABSOLUE: Le fichier .txt contient toujours le XML brut et fonctionne mieux
   // Pas besoin d'essayer les fichiers HTML/XML formatés si on a le .txt
-  const txtUrl = `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/${accessionNumber}.txt`;
+  const txtUrl = `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${accessionNumber}.txt`;
   console.log(`[Form4 Parser] Using TXT file (contains raw XML): ${txtUrl}`);
   try {
     const transactions = await parseForm4(companyId, filingId, txtUrl, accessionNumber);
@@ -634,13 +591,13 @@ export async function parseForm4FromUrl(
   // Fallback: Essayer d'autres formats seulement si le .txt échoue
   const possibleUrls = [
     // Format avec xslF345X05/form4.xml (format moderne)
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/xslF345X05/form4.xml`,
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X05/form4.xml`,
     // Format avec xslF345X04/form4.xml (format précédent)
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/xslF345X04/form4.xml`,
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X04/form4.xml`,
     // Format avec xslF345X03/form4.xml (ancien format)
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/xslF345X03/form4.xml`,
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X03/form4.xml`,
     // Format alternatif avec primarydocument.xml
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/primarydocument.xml`,
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/primarydocument.xml`,
   ];
 
   for (const url of possibleUrls) {

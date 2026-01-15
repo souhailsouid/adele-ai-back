@@ -14,6 +14,7 @@ resource "aws_lambda_function" "form4_parser" {
   runtime       = "nodejs20.x"
   handler       = "index.handler"
   filename      = "${path.module}/../../workers/form4-parser/form4-parser.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../workers/form4-parser/form4-parser.zip")
   timeout       = 300  # 5 minutes (parsing peut être long)
   memory_size   = 1024 # 1GB pour parsing XML
 

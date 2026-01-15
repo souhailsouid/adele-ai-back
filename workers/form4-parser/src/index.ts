@@ -114,24 +114,53 @@ export const handler = async (event: SQSEvent) => {
 async function parseForm4(message: Form4ParsingMessage): Promise<void> {
   const { companyId, filingId, accessionNumber, cik, primaryDocument } = message;
 
-  // Construire l'URL du document
-  const cikNumber = cik.replace(/^0+/, '');
-  const accessionClean = accessionNumber.replace(/-/g, '');
+  // Log détaillé pour diagnostic
+  console.log(`[Form4 Parser] Received message:`, {
+    companyId,
+    filingId,
+    accessionNumber,
+    cik: cik,
+    cikType: typeof cik,
+    primaryDocument,
+  });
 
-  const possibleUrls = [];
+  // IMPORTANT: La SEC EDGAR nécessite le CIK avec les zéros initiaux (10 chiffres)
+  // Exemple: 0001127602 (pas 1127602)
+  // MÊME LOGIQUE QUE LE SCRIPT LOCAL (form4-parser.service.ts)
+  const cikPadded = String(cik || '').padStart(10, '0'); // S'assurer que le CIK a 10 chiffres avec zéros initiaux
+  const accessionClean = accessionNumber.replace(/-/g, ''); // Enlever les tirets pour le chemin
+
+  console.log(`[Form4 Parser] CIK processing: original="${cik}", padded="${cikPadded}"`);
+
+  // PRIORITÉ ABSOLUE: Le fichier .txt contient toujours le XML brut et fonctionne mieux
+  // MÊME LOGIQUE QUE LE SCRIPT LOCAL
+  const txtUrl = `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${accessionNumber}.txt`;
+  console.log(`[Form4 Parser] Using TXT file (contains raw XML): ${txtUrl}`);
+  
+  const possibleUrls = [txtUrl]; // Commencer par le .txt en priorité
+  
+  // Fallback: Essayer d'autres formats seulement si le .txt échoue
   if (primaryDocument) {
-    possibleUrls.push(`${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/${primaryDocument}`);
+    possibleUrls.push(`${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${primaryDocument}`);
   }
   possibleUrls.push(
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/${accessionNumber}.txt`,
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikNumber}/${accessionClean}/primarydocument.xml`,
+    // Format avec xslF345X05/form4.xml (format moderne)
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X05/form4.xml`,
+    // Format avec xslF345X04/form4.xml (format précédent)
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X04/form4.xml`,
+    // Format avec xslF345X03/form4.xml (ancien format)
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X03/form4.xml`,
+    // Format alternatif avec primarydocument.xml
+    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/primarydocument.xml`,
   );
 
   // Essayer chaque URL avec rate limiting
+  console.log(`[Form4 Parser] Trying ${possibleUrls.length} URLs for accessionNumber ${accessionNumber}`);
   for (const url of possibleUrls) {
     try {
       await sleep(RATE_LIMIT_DELAY); // Rate limiting strict
 
+      console.log(`[Form4 Parser] Attempting URL: ${url}`);
       const response = await fetch(url, {
         headers: {
           'User-Agent': USER_AGENT,
@@ -139,6 +168,7 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
         },
       });
 
+      console.log(`[Form4 Parser] Response status for ${url}: ${response.status} ${response.statusText}`);
       if (!response.ok) {
         if (response.status === 429) {
           // Rate limit hit, attendre plus longtemps
@@ -146,10 +176,56 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
           await sleep(2000);
           continue;
         }
+        console.warn(`[Form4 Parser] URL ${url} returned ${response.status}, trying next...`);
         continue; // Essayer l'URL suivante
       }
 
-      const xmlContent = await response.text();
+      let xmlContent = await response.text();
+      
+      // Log la taille et un échantillon du XML pour diagnostic
+      console.log(`[Form4 Parser] Downloaded content (${xmlContent.length} chars), checking structure...`);
+      
+      // Si c'est un fichier .txt, extraire la section XML (MÊME LOGIQUE QUE LE SCRIPT LOCAL)
+      if (url.endsWith('.txt')) {
+        // Le fichier .txt contient <SEC-DOCUMENT><DOCUMENT><TEXT><XML>...</XML></TEXT></DOCUMENT></SEC-DOCUMENT>
+        // Chercher la balise <XML> qui contient le XML brut
+        const xmlMatch = xmlContent.match(/<XML>([\s\S]*?)<\/XML>/i);
+        
+        if (xmlMatch) {
+          xmlContent = xmlMatch[1];
+          console.log(`[Form4 Parser] Extracted XML section from .txt file (${xmlContent.length} chars)`);
+        } else {
+          // Si pas de balise <XML>, chercher directement <ownershipDocument>
+          const ownershipMatch = xmlContent.match(/(<ownershipDocument[\s\S]*<\/ownershipDocument>)/i);
+          if (ownershipMatch) {
+            xmlContent = ownershipMatch[1];
+            console.log(`[Form4 Parser] Extracted ownershipDocument from .txt file (${xmlContent.length} chars)`);
+          } else {
+            console.warn(`[Form4 Parser] Could not find XML section in .txt file, using full content`);
+          }
+        }
+      }
+      
+      // Vérifier si c'est du HTML (ownership.xml formaté)
+      if (xmlContent.trim().startsWith('<!DOCTYPE html') || xmlContent.trim().startsWith('<html')) {
+        console.warn(`[Form4 Parser] File appears to be HTML formatted, not XML. Trying to extract XML from HTML...`);
+        // Chercher des balises XML dans le HTML (peu probable mais possible)
+        const xmlInHtml = xmlContent.match(/(<ownershipDocument[\s\S]*<\/ownershipDocument>)/i);
+        if (xmlInHtml) {
+          xmlContent = xmlInHtml[1];
+          console.log(`[Form4 Parser] Extracted XML from HTML (${xmlContent.length} chars)`);
+        } else {
+          console.warn(`[Form4 Parser] File is HTML formatted and contains no XML data. Skipping...`);
+          continue;
+        }
+      }
+      
+      if (xmlContent.length < 500) {
+        console.warn(`[Form4 Parser] XML content is very short, might be an error page`);
+        console.warn(`[Form4 Parser] First 200 chars: ${xmlContent.substring(0, 200)}`);
+      }
+      
+      // Parser le XML (MÊME LOGIQUE QUE LE SCRIPT LOCAL)
       const transactions = parseForm4XML(xmlContent, companyId, filingId);
 
       if (transactions.length > 0) {
@@ -161,6 +237,9 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
         
         console.log(`✅ Parsed Form 4 ${accessionNumber}: ${transactions.length} transactions`);
         return; // Succès, on arrête
+      } else {
+        console.warn(`[Form4 Parser] No transactions extracted from Form 4 ${accessionNumber}`);
+        // Continuer à essayer les autres URLs même si aucune transaction trouvée
       }
     } catch (error: any) {
       console.log(`Failed to parse ${url}, trying next...`);
@@ -172,51 +251,98 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
 }
 
 /**
- * Parser le XML Form 4 (version simplifiée)
+ * Parser le XML Form 4 (MÊME LOGIQUE QUE LE SERVICE)
  */
 function parseForm4XML(xmlContent: string, companyId: number, filingId: number): any[] {
   const transactions: any[] = [];
 
   try {
+    // Gérer les namespaces XML (ex: <edgar:rptOwnerName> ou <rptOwnerName>)
+    // Supprimer les namespaces pour simplifier le parsing
+    const xmlWithoutNamespaces = xmlContent.replace(/<(\/?)([^:>]+):([^>]+)>/g, '<$1$3>');
+    
     // Extraire le nom du reporting owner
-    const ownerNameMatch = xmlContent.match(/<rptOwnerName[^>]*>([^<]+)<\/rptOwnerName>/i);
+    // Format moderne: <rptOwnerName>Tsao David</rptOwnerName> (pas de <value> pour le nom)
+    let ownerNameMatch = xmlWithoutNamespaces.match(/<rptOwnerName[^>]*>([^<]+)<\/rptOwnerName>/i);
+    if (!ownerNameMatch) {
+      ownerNameMatch = xmlContent.match(/<rptOwnerName[^>]*>([^<]+)<\/rptOwnerName>/i);
+    }
     const ownerName = ownerNameMatch ? ownerNameMatch[1].trim() : 'Unknown';
     
     // Extraire le CIK du reporting owner
-    const ownerCikMatch = xmlContent.match(/<rptOwnerCik[^>]*>([^<]+)<\/rptOwnerCik>/i);
+    // Format moderne: <rptOwnerCik>0002087127</rptOwnerCik> (pas de <value> pour le CIK)
+    let ownerCikMatch = xmlWithoutNamespaces.match(/<rptOwnerCik[^>]*>([^<]+)<\/rptOwnerCik>/i);
+    if (!ownerCikMatch) {
+      ownerCikMatch = xmlContent.match(/<rptOwnerCik[^>]*>([^<]+)<\/rptOwnerCik>/i);
+    }
     const ownerCik = ownerCikMatch ? ownerCikMatch[1].trim().padStart(10, '0') : undefined;
 
-    // Parser les transactions non-dérivatives
-    const nonDerivativeMatches = xmlContent.matchAll(/<nonDerivativeTransaction[^>]*>([\s\S]*?)<\/nonDerivativeTransaction>/gi);
+    console.log(`[Form4 Parser] Parsing XML - Owner: ${ownerName}, CIK: ${ownerCik}`);
+
+    // Parser les transactions non-dérivatives (stocks directs)
+    // Chercher dans le XML avec et sans namespaces
+    const nonDerivativePattern = /<nonDerivativeTransaction[^>]*>([\s\S]*?)<\/nonDerivativeTransaction>/gi;
+    const nonDerivativeMatches = Array.from(xmlWithoutNamespaces.matchAll(nonDerivativePattern));
+    console.log(`[Form4 Parser] Found ${nonDerivativeMatches.length} non-derivative transactions`);
     
     for (const match of nonDerivativeMatches) {
       const transactionXml = match[1];
       const transaction = parseTransactionBlock(transactionXml, ownerName, ownerCik, 'stock');
       if (transaction) {
         transactions.push(transaction);
+      } else {
+        console.warn(`[Form4 Parser] Failed to parse non-derivative transaction block`);
       }
     }
 
-    // Parser les transactions dérivatives
-    const derivativeMatches = xmlContent.matchAll(/<derivativeTransaction[^>]*>([\s\S]*?)<\/derivativeTransaction>/gi);
+    // Parser les transactions dérivatives (options, etc.)
+    const derivativePattern = /<derivativeTransaction[^>]*>([\s\S]*?)<\/derivativeTransaction>/gi;
+    const derivativeMatches = Array.from(xmlWithoutNamespaces.matchAll(derivativePattern));
+    console.log(`[Form4 Parser] Found ${derivativeMatches.length} derivative transactions`);
     
     for (const match of derivativeMatches) {
       const transactionXml = match[1];
       const transaction = parseTransactionBlock(transactionXml, ownerName, ownerCik, 'derivative');
       if (transaction) {
         transactions.push(transaction);
+      } else {
+        console.warn(`[Form4 Parser] Failed to parse derivative transaction block`);
       }
     }
+    
+    console.log(`[Form4 Parser] Total transactions extracted: ${transactions.length}`);
+    
+    // Si aucune transaction trouvée, logger un échantillon du XML pour diagnostic
+    if (transactions.length === 0) {
+      const xmlSample = xmlContent.substring(0, 1000);
+      console.warn(`[Form4 Parser] No transactions found. XML sample (first 1000 chars):`);
+      console.warn(xmlSample);
+    }
 
-    // Extraire la relation
-    const relationMatch = xmlContent.match(/<officerTitle[^>]*>([^<]+)<\/officerTitle>/i) ||
-                         xmlContent.match(/<directorTitle[^>]*>([^<]+)<\/directorTitle>/i);
+    // Extraire la relation (CEO, CFO, etc.) depuis le reportingOwner
+    // Format moderne: <officerTitle>Chief Technology Officer</officerTitle>
+    let relationMatch = xmlWithoutNamespaces.match(/<officerTitle[^>]*>([^<]+)<\/officerTitle>/i);
+    if (!relationMatch) {
+      relationMatch = xmlContent.match(/<officerTitle[^>]*>([^<]+)<\/officerTitle>/i);
+    }
+    if (!relationMatch) {
+      relationMatch = xmlContent.match(/<directorTitle[^>]*>([^<]+)<\/directorTitle>/i);
+    }
+    
     const relation = relationMatch ? relationMatch[1].trim() : 'Unknown';
 
     // Mettre à jour la relation pour toutes les transactions
+    // Décoder les entités HTML (&amp; -> &, etc.)
+    const cleanRelation = relation
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    
     transactions.forEach(t => {
       if (t.relation === 'Unknown') {
-        t.relation = relation;
+        t.relation = cleanRelation;
       }
     });
 
@@ -228,7 +354,9 @@ function parseForm4XML(xmlContent: string, companyId: number, filingId: number):
 }
 
 /**
- * Parser un bloc de transaction
+ * Parser un bloc de transaction (VERSION ULTRA-ROBUSTE)
+ * 
+ * MÊME LOGIQUE QUE LE SERVICE form4-parser.service.ts
  */
 function parseTransactionBlock(
   transactionXml: string,
@@ -237,76 +365,133 @@ function parseTransactionBlock(
   type: 'stock' | 'derivative'
 ): any | null {
   try {
-    const dateMatch = transactionXml.match(/<transactionDate[^>]*>([^<]+)<\/transactionDate>/i);
-    const transactionDate = dateMatch ? dateMatch[1].trim() : null;
+    // 1. Nettoyage des namespaces pour simplifier les Regex
+    const cleanXml = transactionXml.replace(/<(\/?)([^:>]+):([^>]+)>/g, '<$1$3>');
     
-    if (!transactionDate) {
+    // 2. Helper ultra-robuste pour extraire une valeur numérique
+    // Cette regex cherche la balise, ignore les <value> optionnels et capture le chiffre
+    // Elle gère aussi les espaces et les nouvelles lignes \s*
+    const extractNumeric = (tag: string): number => {
+      const regex = new RegExp(`<${tag}[^>]*>(?:\\s*<value>)?\\s*([^<\\s]+)\\s*(?:<\\/value>)?\\s*<\\/${tag}>`, 'i');
+      const match = cleanXml.match(regex);
+      if (match) {
+        const val = match[1].replace(/,/g, ''); // Enlever les virgules américaines
+        return parseFloat(val) || 0;
+      }
+      return 0;
+    };
+
+    // 3. Extraction des données
+    const transactionDateMatch = cleanXml.match(/<transactionDate[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
+    const transactionDate = transactionDateMatch ? transactionDateMatch[1] : null;
+    
+    const transactionCodeMatch = cleanXml.match(/<transactionCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
+    const transactionCode = transactionCodeMatch ? transactionCodeMatch[1] : '';
+
+    // On cherche les shares. Si 0, on regarde si c'est une option (derivative)
+    let shares = extractNumeric('transactionShares');
+    if (shares === 0 && type === 'derivative') {
+      shares = extractNumeric('underlyingSecurityShares');
+    }
+
+    const price = extractNumeric('transactionPricePerShare');
+    const acquiredDisposedCode = cleanXml.match(/<transactionAcquiredDisposedCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1];
+
+    // 4. LOGIQUE DE REJET (Le point sensible)
+    if (!transactionDate) return null;
+    
+    // On ne rejette QUE si les shares ET le prix sont à 0 (cas rare des erreurs SEC)
+    // Mais on accepte les shares > 0 avec prix 0 (Grants/Cadeaux)
+    if (shares === 0) {
+      console.warn(`[Form4 Parser] Skipping block: Shares=0. Date: ${transactionDate}`);
       return null;
     }
 
-    const codeMatch = transactionXml.match(/<transactionCode[^>]*>([^<]+)<\/transactionCode>/i);
-    const transactionCode = codeMatch ? codeMatch[1].trim() : '';
-    const transactionType = mapTransactionCode(transactionCode);
-
-    const sharesMatch = transactionXml.match(/<transactionShares[^>]*>([^<]+)<\/transactionShares>/i);
-    const shares = sharesMatch ? parseFloat(sharesMatch[1].replace(/,/g, '')) : 0;
-
-    const priceMatch = transactionXml.match(/<transactionPricePerShare[^>]*>([^<]+)<\/transactionPricePerShare>/i);
-    const pricePerShare = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
-
-    const totalValue = shares * pricePerShare;
+    // 5. Extraire le titre du security (optionnel)
+    const securityTitleMatch = cleanXml.match(/<securityTitle[^>]*>(?:\s*<value>)?\s*([^<]+)/i);
+    const securityTitle = securityTitleMatch ? securityTitleMatch[1].trim() : undefined;
 
     return {
       insider_name: ownerName,
       insider_cik: ownerCik,
-      relation: 'Unknown',
-      transaction_type: transactionType,
+      relation: 'Unknown', 
+      transaction_type: mapTransactionCode(transactionCode),
       shares: Math.abs(shares),
-      price_per_share: pricePerShare,
-      total_value: Math.abs(totalValue),
-      transaction_date: formatDate(transactionDate),
+      price_per_share: price,
+      total_value: Math.abs(shares * price),
+      transaction_date: validateAndFormatDate(transactionDate),
+      security_title: securityTitle,
+      ownership_nature: acquiredDisposedCode === 'A' ? 'Direct' : 'Indirect',
     };
   } catch (error: any) {
-    console.error('[Form4 Parser] Transaction parsing error:', error.message);
+    console.error('[Form4 Parser] Error parsing transaction block:', error.message);
+    console.error('[Form4 Parser] Transaction XML snippet:', transactionXml.substring(0, 200));
     return null;
   }
 }
 
 /**
- * Mapper les codes de transaction
+ * Mapper les codes de transaction (MÊME LOGIQUE QUE LE SERVICE)
  */
 function mapTransactionCode(code: string): string {
-  const codeMap: Record<string, string> = {
-    'P': 'Purchase',
-    'S': 'Sale',
-    'A': 'Grant',
-    'D': 'Sale to Issuer',
-    'F': 'Payment of Exercise Price',
-    'I': 'Discretionary Transaction',
-    'M': 'Exercise or Conversion',
-    'C': 'Conversion',
-    'E': 'Expiration of Short Derivative Position',
-    'H': 'Expiration of Long Derivative Position',
-    'O': 'Exercise of Out-of-the-Money Derivative',
-    'X': 'Exercise of In-the-Money or At-the-Money Derivative',
-    'G': 'Gift',
-    'W': 'Acquisition or Disposition by Will',
-    'L': 'Small Acquisition',
-    'Z': 'Deposit into or Withdrawal from Voting Trust',
+  const mapping: Record<string, string> = {
+    'P': 'Purchase',      // Achat Open Market (LE SEUL VRAI SIGNAL)
+    'S': 'Sale',          // Vente Open Market
+    'M': 'Exercise',      // Conversion d'options en actions
+    'C': 'Conversion',    // Conversion d'un titre dérivé
+    'A': 'Grant',         // Actions gratuites données par la boîte
+    'G': 'Gift',          // Cadeau (Donation)
+    'F': 'Tax Payment',   // Vente forcée pour payer les impôts
+    'J': 'Other'          // Mouvements divers (souvent trusts)
   };
-  return codeMap[code] || code;
+  return mapping[code.toUpperCase()] || `Other (${code})`;
 }
 
 /**
- * Formater une date
+ * Validation stricte de la date pour éviter le bug de 1975
+ * 
+ * Le problème précédent : La regex /[^0-9]/g extrait tous les chiffres,
+ * ce qui peut créer des dates invalides si elle reçoit un CIK ou un timestamp.
  */
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    return date.toISOString().split('T')[0];
-  } catch {
-    return dateStr;
+function validateAndFormatDate(dateStr: string): string {
+  if (!dateStr || !dateStr.trim()) {
+    console.warn(`[Form4 Parser] validateAndFormatDate: Empty date string, using current date`);
+    return new Date().toISOString().split('T')[0];
   }
+  
+  const trimmed = dateStr.trim();
+  
+  // Regex pour format YYYY-MM-DD (format standard SEC)
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+    
+    // Validation stricte : année entre 1995 et 2028 (dates raisonnables pour Form 4)
+    if (year < 1995 || year > 2028) {
+      console.warn(`[Form4 Parser] validateAndFormatDate: Year ${year} is out of range (1995-2028), using current date`);
+      return new Date().toISOString().split('T')[0];
+    }
+    
+    // Validation que c'est une date valide
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return match[0]; // Retourner YYYY-MM-DD
+    } else {
+      console.warn(`[Form4 Parser] validateAndFormatDate: Invalid date components (${year}-${month}-${day}), using current date`);
+      return new Date().toISOString().split('T')[0];
+    }
+  }
+  
+  // Si format ISO (YYYY-MM-DDTHH:mm:ss), extraire la date
+  const isoMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) {
+    return validateAndFormatDate(isoMatch[1]); // Réutiliser la validation
+  }
+  
+  // Dernier fallback: date actuelle
+  console.warn(`[Form4 Parser] validateAndFormatDate: Could not parse date "${dateStr}", using current date`);
+  return new Date().toISOString().split('T')[0];
 }
 
 /**
@@ -467,15 +652,34 @@ async function writeTransactionsToS3Parquet(transactions: any[]): Promise<void> 
   const transactionsByPartition = new Map<string, any[]>();
   
   for (const transaction of transactions) {
-    const date = new Date(transaction.transaction_date);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
+    // Convertir transaction_date (string YYYY-MM-DD) en Date UTC pour éviter les problèmes de timezone
+    let date: Date;
+    if (typeof transaction.transaction_date === 'string') {
+      const dateStr = transaction.transaction_date.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        date = new Date(Date.UTC(year, month - 1, day));
+      } else {
+        date = new Date(transaction.transaction_date);
+      }
+    } else {
+      date = new Date(transaction.transaction_date);
+    }
+    
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
     const partitionKey = `${year}-${month}`;
     
     if (!transactionsByPartition.has(partitionKey)) {
       transactionsByPartition.set(partitionKey, []);
     }
-    transactionsByPartition.get(partitionKey)!.push(transaction);
+    
+    // Convertir transaction_date en Date pour Parquet
+    const transactionWithDate = {
+      ...transaction,
+      transaction_date: date, // Parquet DATE attend un objet Date
+    };
+    transactionsByPartition.get(partitionKey)!.push(transactionWithDate);
   }
 
   // Écrire chaque partition
