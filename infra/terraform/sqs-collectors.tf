@@ -7,7 +7,7 @@
 resource "aws_sqs_queue" "collectors_queue" {
   name                       = "${var.project}-${var.stage}-collectors"
   visibility_timeout_seconds = 900   # 15 minutes (pour gérer les timeouts des collectors lourds)
-  message_retention_seconds  = 86400 # 24 heures
+  message_retention_seconds  = 345600 # 4 jours (permet de "pause" sans perdre les messages)
   receive_wait_time_seconds  = 20    # Long polling pour réduire les coûts
 
   # Dead Letter Queue pour les messages qui échouent après 3 tentatives
@@ -60,6 +60,7 @@ resource "aws_sqs_queue" "parser_13f_dlq" {
 # ============================================
 
 # Permission pour EventBridge d'envoyer vers SQS
+# ⚠️ IMPORTANT: Sans cette policy, EventBridge ne peut pas envoyer de messages vers SQS
 resource "aws_sqs_queue_policy" "collectors_queue_policy" {
   queue_url = aws_sqs_queue.collectors_queue.id
 
@@ -67,17 +68,67 @@ resource "aws_sqs_queue_policy" "collectors_queue_policy" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "AllowEventBridgeSECSmartMoneySync"
         Effect = "Allow"
         Principal = {
           Service = "events.amazonaws.com"
         }
         Action   = "sqs:SendMessage"
         Resource = aws_sqs_queue.collectors_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.sec_smart_money_sync_cron.arn
+          }
+        }
+      },
+      {
+        Sid    = "AllowEventBridgeSECSmartMoneyTrackInsiders"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.collectors_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.sec_smart_money_track_insiders_cron.arn
+          }
+        }
+      },
+      {
+        Sid    = "AllowEventBridgeCollectorSECWatcher"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.collectors_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.collector_sec_watcher_cron.arn
+          }
+        }
+      },
+      {
+        Sid    = "AllowEventBridgeCollectorRSS"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.collectors_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.collector_rss_cron.arn
+          }
+        }
       }
     ]
   })
 }
 
+# Permission pour EventBridge d'envoyer vers SQS (parser-13f)
+# ⚠️ IMPORTANT: Condition SourceArn pour restreindre aux règles EventBridge spécifiques
 resource "aws_sqs_queue_policy" "parser_13f_queue_policy" {
   queue_url = aws_sqs_queue.parser_13f_queue.id
 
@@ -85,12 +136,18 @@ resource "aws_sqs_queue_policy" "parser_13f_queue_policy" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "AllowEventBridgeParser13FTrigger"
         Effect = "Allow"
         Principal = {
           Service = "events.amazonaws.com"
         }
         Action   = "sqs:SendMessage"
         Resource = aws_sqs_queue.parser_13f_queue.arn
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.parser_13f_trigger.arn
+          }
+        }
       }
     ]
   })
@@ -115,7 +172,8 @@ resource "aws_iam_role_policy" "collectors_sqs_receive" {
         Resource = [
           aws_sqs_queue.collectors_queue.arn,
           aws_sqs_queue.parser_13f_queue.arn,
-          aws_sqs_queue.form4_parser_queue.arn
+          aws_sqs_queue.form4_parser_queue.arn,
+          aws_sqs_queue.form144_parser_queue.arn
         ]
       }
     ]
@@ -136,7 +194,8 @@ resource "aws_iam_role_policy" "collectors_sqs_send" {
           "sqs:SendMessage"
         ]
         Resource = [
-          aws_sqs_queue.form4_parser_queue.arn
+          aws_sqs_queue.form4_parser_queue.arn,
+          aws_sqs_queue.form144_parser_queue.arn
         ]
       }
     ]

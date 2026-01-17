@@ -407,25 +407,55 @@ async function enrichCompaniesFromSecParallel() {
     let filingsCount = 0;
     let errorCount = 0;
 
+    // ✅ OPTIMISATION: Batch queries pour éviter N requêtes Supabase
+    // Au lieu de 2 requêtes par company (5400 requêtes pour 2700 companies),
+    // on fait 2 requêtes batch totales (99.96% de réduction)
+    let existingCompaniesMap: Map<string, { ein: string | null }> = new Map();
+    let filingsCountMap: Map<string, number> = new Map();
+
+    if (!dryRun && !force && workerCompanies.length > 0) {
+      console.log(`\n🔍 Batch lookup pour ${workerCompanies.length} companies (optimisation coût)...\n`);
+      
+      // 1. Batch query pour toutes les companies (1 requête au lieu de N)
+      const ciks = workerCompanies.map(c => c.cik);
+      const { data: existingCompanies } = await supabase
+        .from('companies')
+        .select('cik, ein')
+        .in('cik', ciks);
+      
+      if (existingCompanies) {
+        for (const comp of existingCompanies) {
+          existingCompaniesMap.set(comp.cik, { ein: comp.ein });
+        }
+      }
+      console.log(`   ✅ Found ${existingCompaniesMap.size} companies avec EIN (out of ${ciks.length})`);
+      
+      // 2. Batch query pour compter les filings (1 requête au lieu de N)
+      const { data: filingsData } = await supabase
+        .from('company_filings')
+        .select('cik')
+        .in('cik', ciks);
+      
+      if (filingsData) {
+        for (const filing of filingsData) {
+          filingsCountMap.set(filing.cik, (filingsCountMap.get(filing.cik) || 0) + 1);
+        }
+      }
+      console.log(`   ✅ Found filings counts for ${filingsCountMap.size} companies\n`);
+    }
+
     for (const company of workerCompanies) {
       processedCount++;
       console.log(`\n[Worker ${workerId}] [${processedCount}/${workerCompanies.length}] ${company.ticker} - ${company.name}`);
       console.log(`   CIK: ${company.cik}`);
 
       if (!dryRun && !force) {
-        const { data: existingCompany } = await supabase
-          .from('companies')
-          .select('ein')
-          .eq('cik', company.cik)
-          .maybeSingle();
+        // Utiliser les maps au lieu de requêtes Supabase
+        const existingCompany = existingCompaniesMap.get(company.cik);
+        const filingsCountForCompany = filingsCountMap.get(company.cik) || 0;
         
-        const { count: filingsCount } = await supabase
-          .from('company_filings')
-          .select('id', { count: 'exact', head: true })
-          .eq('cik', company.cik);
-        
-        if (existingCompany?.ein || (filingsCount && filingsCount >= 10)) {
-          console.log(`   ⏭️  Déjà enrichie (EIN: ${existingCompany?.ein ? 'oui' : 'non'}, Filings: ${filingsCount || 0}), skip`);
+        if (existingCompany?.ein || filingsCountForCompany >= 10) {
+          console.log(`   ⏭️  Déjà enrichie (EIN: ${existingCompany?.ein ? 'oui' : 'non'}, Filings: ${filingsCountForCompany}), skip`);
           skippedCount++;
           continue;
         }

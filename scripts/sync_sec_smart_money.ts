@@ -19,7 +19,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { executeAthenaQuery } from '../services/api/src/athena/query';
-import { findRowByColumnInS3Parquet } from '../services/api/src/athena/s3-direct-read';
 import { insertRowS3, insertRowsS3 } from '../services/api/src/athena/write';
 import { mapCusipToTicker, mapCusipsToTickers } from '../services/api/src/services/cusip-mapping.service';
 import { parseForm4FromUrl } from '../services/api/src/services/form4-parser.service';
@@ -62,6 +61,54 @@ const USER_AGENT = 'ADEL AI (contact@adel.ai)';
 
 // Rate limiting: 10 requêtes par seconde max (SEC requirement)
 const RATE_LIMIT_DELAY = 100; // 100ms entre chaque requête = 10 req/s
+
+// ⚠️ Cache in-memory pour éviter les requêtes Athena répétées dans les scripts
+// (le cache Lambda ne fonctionne pas pour les scripts séparés)
+const companyCache = new Map<string, any>();
+const fundCache = new Map<string, any>();
+
+/**
+ * Helper Athena avec cache in-memory pour lookups par colonne
+ * Remplace s3-direct-read.ts (interdit en prod pour éviter les coûts S3)
+ * 
+ * ⚠️ IMPORTANT: Pour les batch operations, privilégier WHERE IN (...) plutôt que
+ * N appels unitaires (évite le minimum 10MB/query d'Athena)
+ */
+async function findOneByColumnAthena(
+  table: string,
+  column: string,
+  value: string | number,
+  cacheMap?: Map<string, any>
+): Promise<any | null> {
+  // Vérifier le cache d'abord
+  const cacheKey = `${table}:${column}:${value}`;
+  if (cacheMap && cacheMap.has(cacheKey)) {
+    return cacheMap.get(cacheKey);
+  }
+
+  // Construire la requête Athena
+  const v =
+    typeof value === 'number'
+      ? `${value}`
+      : `'${String(value).replace(/'/g, "''")}'`;
+
+  const query = `
+    SELECT *
+    FROM ${table}
+    WHERE ${column} = ${v}
+    LIMIT 1
+  `;
+
+  const rows = await executeAthenaQuery(query);
+  const result = rows?.[0] ?? null;
+
+  // Mettre en cache si Map fourni
+  if (cacheMap && result) {
+    cacheMap.set(cacheKey, result);
+  }
+
+  return result;
+}
 
 /**
  * Synchroniser les 13F-HR des Investment Managers

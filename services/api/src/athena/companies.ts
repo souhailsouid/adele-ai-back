@@ -5,32 +5,19 @@
  */
 
 import { executeAthenaQuery, executeAthenaQuerySingle } from './query';
-import { findRowByIdInS3Parquet, findRowByColumnInS3Parquet } from './s3-direct-read';
 import { withCache, CacheKeys } from './cache';
 import { Company } from '../companies';
 
 /**
  * Récupérer une entreprise par son ticker
  * 
- * Optimisé avec cache pour éviter les requêtes Athena répétées
+ * ⚠️ OPTIMISATION COÛT: Utilise uniquement Athena avec cache (pas de S3 direct read)
+ * Le cache Lambda (5 min) évite les requêtes répétées, beaucoup moins cher que 43M requêtes S3 GET
  */
 export async function getCompanyByTickerAthena(ticker: string): Promise<Company | null> {
-  // Utiliser le cache pour éviter les requêtes répétées (5 minutes TTL)
   return withCache(
     CacheKeys.companyByTicker(ticker),
     async () => {
-      // Essayer d'abord S3 direct read (plus rapide et moins cher)
-      const s3Result = await findRowByColumnInS3Parquet<Company>(
-        'companies',
-        'ticker',
-        ticker.toUpperCase()
-      );
-
-      if (s3Result) {
-        return s3Result;
-      }
-
-      // Fallback vers Athena si S3 direct read ne trouve pas
       const query = `
         SELECT 
           id,
@@ -79,13 +66,54 @@ export async function getCompanyByTickerAthena(ticker: string): Promise<Company 
 
 /**
  * Récupérer une entreprise par son ID
+ * 
+ * ⚠️ OPTIMISATION COÛT: Utilise uniquement Athena avec cache (pas de S3 direct read)
  */
 export async function getCompanyByIdAthena(id: number): Promise<Company | null> {
   return withCache(
     CacheKeys.companyById(id),
     async () => {
-      // S3 direct read pour lookup par ID
-      return await findRowByIdInS3Parquet<Company>('companies', id);
+      const query = `
+        SELECT 
+          id,
+          ticker,
+          cik,
+          name,
+          sector,
+          industry,
+          market_cap,
+          headquarters_country,
+          headquarters_state,
+          sic_code,
+          category,
+          CAST(created_at AS VARCHAR) as created_at,
+          CAST(updated_at AS VARCHAR) as updated_at
+        FROM companies
+        WHERE id = ${id}
+        LIMIT 1
+      `;
+
+      const result = await executeAthenaQuerySingle(query);
+      
+      if (!result) {
+        return null;
+      }
+
+      return {
+        id: parseInt(result.id || '0', 10),
+        ticker: result.ticker || '',
+        cik: result.cik || '',
+        name: result.name || '',
+        sector: result.sector || null,
+        industry: result.industry || null,
+        market_cap: result.market_cap ? parseInt(result.market_cap, 10) : null,
+        headquarters_country: result.headquarters_country || null,
+        headquarters_state: result.headquarters_state || null,
+        sic_code: result.sic_code || null,
+        category: result.category || null,
+        created_at: result.created_at || '',
+        updated_at: result.updated_at || '',
+      };
     },
     5 * 60 * 1000
   );
@@ -93,23 +121,13 @@ export async function getCompanyByIdAthena(id: number): Promise<Company | null> 
 
 /**
  * Récupérer une entreprise par son CIK
+ * 
+ * ⚠️ OPTIMISATION COÛT: Utilise uniquement Athena avec cache (pas de S3 direct read)
  */
 export async function getCompanyByCikAthena(cik: string): Promise<Company | null> {
   return withCache(
     CacheKeys.companyByCik(cik),
     async () => {
-      // S3 direct read pour lookup par CIK
-      const s3Result = await findRowByColumnInS3Parquet<Company>(
-        'companies',
-        'cik',
-        cik
-      );
-
-      if (s3Result) {
-        return s3Result;
-      }
-
-      // Fallback Athena
       const query = `
         SELECT 
           id,

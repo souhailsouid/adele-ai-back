@@ -63,6 +63,30 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lake" {
       storage_class = "GLACIER" # Glacier (80% moins cher)
     }
   }
+
+  # Stopper les multipart incomplets (> 1 jour) - Éliminer les coûts fantômes
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1 # Supprimer les multipart incomplets après 1 jour
+    }
+  }
+
+  # Nettoyer les anciennes versions (si versioning activé)
+  rule {
+    id     = "delete-old-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90 # Supprimer les versions > 90 jours
+    }
+  }
 }
 
 # Public access block (sécurité)

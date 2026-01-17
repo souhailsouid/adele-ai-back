@@ -27,7 +27,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "athena_results" {
     filter {}
 
     expiration {
-      days = 30 # Supprimer les résultats après 30 jours
+      days = 7 # Supprimer les résultats après 7 jours (optimisation coût)
+    }
+  }
+
+  # Stopper les multipart incomplets (> 1 jour)
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1 # Supprimer les multipart incomplets après 1 jour
     }
   }
 }
@@ -39,6 +51,8 @@ resource "aws_athena_workgroup" "main" {
   configuration {
     enforce_workgroup_configuration    = true
     publish_cloudwatch_metrics_enabled = true
+    # 🛑 KILL SWITCH: Limite à 10MB par requête (minimum AWS) = $0.05 par requête max
+    bytes_scanned_cutoff_per_query = 10485760  # 10MB = $0.05 par requête max
 
     result_configuration {
       output_location = "s3://${aws_s3_bucket.athena_results.bucket}/queries/"
@@ -53,6 +67,9 @@ resource "aws_athena_workgroup" "main" {
       selected_engine_version = "Athena engine version 3"
     }
   }
+  
+  # 🛑 KILL SWITCH: Désactiver le workgroup (toutes les requêtes échouent)
+  state = "DISABLED"
 
   tags = {
     Name        = "${var.project}-${var.stage}-athena-workgroup"

@@ -17,6 +17,9 @@ resource "aws_lambda_function" "form4_parser" {
   source_code_hash = filebase64sha256("${path.module}/../../workers/form4-parser/form4-parser.zip")
   timeout       = 300  # 5 minutes (parsing peut être long)
   memory_size   = 1024 # 1GB pour parsing XML
+  # 🛡️ KILL SWITCH: Reserved concurrency (1 = normal limité, 0 = arrêt complet)
+  # Variable: form4_parser_concurrency (défaut = 1)
+  reserved_concurrent_executions = var.form4_parser_concurrency
 
   depends_on = [aws_cloudwatch_log_group.form4_parser]
 
@@ -39,13 +42,17 @@ resource "aws_lambda_function" "form4_parser" {
 
 # Lambda consomme depuis SQS avec rate limiting
 # batch_size = 1 pour traiter 1 message à la fois (rate limiting strict)
+# 🛑 DÉSACTIVÉ TEMPORAIREMENT
 resource "aws_lambda_event_source_mapping" "form4_parser_sqs" {
   event_source_arn = aws_sqs_queue.form4_parser_queue.arn
   function_name    = aws_lambda_function.form4_parser.arn
   batch_size       = 1 # Traiter 1 message à la fois pour respecter 10 req/s
-  enabled          = true
+  enabled          = false  # 🛑 DÉSACTIVÉ
   
   # Maximum concurrency: 1 (pour respecter strictement le rate limiting)
   # Note: Cette option nécessite AWS Lambda concurrency controls
   # Pour l'instant, batch_size=1 suffit
+  
+  # ⚠️ IMPORTANT: Activer reportBatchItemFailures pour retry uniquement les messages échoués
+  function_response_types = ["ReportBatchItemFailures"]
 }

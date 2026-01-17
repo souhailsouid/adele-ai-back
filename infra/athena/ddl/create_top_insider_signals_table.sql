@@ -2,6 +2,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS top_insider_signals (
   id BIGINT,
   company_id BIGINT,
   filing_id BIGINT,
+  accession_number STRING,
   insider_name STRING,
   insider_cik STRING,
   insider_title STRING,
@@ -12,6 +13,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS top_insider_signals (
   total_value DOUBLE,
   transaction_date DATE,
   signal_score INT,
+  source_type STRING,
   created_at TIMESTAMP
 )
 PARTITIONED BY (

@@ -7,8 +7,7 @@
  * Architecture Extreme Budget: S3 + Athena (pas de Supabase)
  */
 
-import { executeAthenaQuery } from '../athena/query';
-import { findRowByColumnInS3Parquet } from '../athena/s3-direct-read';
+import { executeAthenaQuery, executeAthenaQuerySingle } from '../athena/query';
 import { insertRowS3 } from '../athena/write';
 
 const OPENFIGI_API_URL = 'https://api.openfigi.com/v3/mapping';
@@ -75,13 +74,16 @@ export async function mapCusipToTicker(cusip: string): Promise<string | null> {
     console.warn(`[CUSIP Holdings] Error checking holdings: ${error.message}`);
   }
 
-  // 2. Vérifier le cache local (S3 direct read pour lookup rapide)
+  // 2. Vérifier le cache local (Athena query - ⚠️ OPTIMISATION COÛT: pas de S3 direct read)
   try {
-    const cached = await findRowByColumnInS3Parquet<{ ticker: string; company_name?: string }>(
-      'cusip_ticker_mapping',
-      'cusip',
-      normalizedCusip
-    );
+    const cacheQuery = `
+      SELECT cusip, ticker, company_name
+      FROM cusip_ticker_mapping
+      WHERE cusip = '${normalizedCusip.replace(/'/g, "''")}'
+      LIMIT 1
+    `;
+    
+    const cached = await executeAthenaQuerySingle(cacheQuery);
 
     if (cached && cached.ticker) {
       console.log(`[CUSIP Cache Hit] ${normalizedCusip} → ${cached.ticker}`);

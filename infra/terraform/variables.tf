@@ -117,3 +117,70 @@ variable "telegram_chat_id" {
   sensitive   = true
   default     = ""
 }
+
+variable "budget_alert_emails" {
+  type        = list(string)
+  description = "Email addresses to receive budget alerts"
+  default     = []
+}
+
+# ============================================
+# Kill Switch Variables - Reserved Concurrency
+# ============================================
+# Par défaut = 1 (fonctionnement normal mais limité)
+# Mettre à 0 pour kill switch complet (aucune exécution)
+#
+# ⚠️ NOTE: form4_parser_concurrency est pour l'ANCIEN workflow (form4-parser)
+# Pour le NOUVEAU workflow SEC Form 4, utiliser sec_form4_parser_concurrency
+
+variable "form4_parser_concurrency" {
+  type        = number
+  description = "[DEPRECATED - Ancien workflow] Reserved concurrency for form4-parser Lambda (0 = kill switch, 1 = normal limited, default = 1). Utiliser sec_form4_parser_concurrency pour le nouveau workflow."
+  default     = 1
+}
+
+variable "form144_parser_concurrency" {
+  type        = number
+  description = "Reserved concurrency for form144-parser Lambda (0 = kill switch, 1 = normal limited, default = 1)"
+  default     = 1
+}
+
+variable "sec_smart_money_sync_concurrency" {
+  type        = number
+  description = "Reserved concurrency for sec-smart-money-sync Lambda (0 = kill switch, 1 = normal limited, default = 1)"
+  default     = 1
+}
+
+variable "parser_13f_concurrency" {
+  type        = number
+  description = "Reserved concurrency for parser-13f Lambda (0 = kill switch, 1+ = normal limited, default = 1)"
+  default     = 1
+}
+
+# ============================================
+# SEC Form 4 Workflow Variables
+# ============================================
+
+variable "enable_sec_sync" {
+  type        = bool
+  description = "Enable SEC Form 4 sync workflow (DISCOVER + PARSER). If false, both Lambdas exit immediately."
+  default     = false  # Désactivé par défaut (sécurité)
+}
+
+variable "company_ciks_json" {
+  type        = string
+  description = "JSON array of company CIKs to monitor (e.g., '[\"0000320193\", \"0000789019\"]')"
+  default     = "[]"
+}
+
+variable "sec_form4_discover_concurrency" {
+  type        = number
+  description = "Reserved concurrency for sec-form4-discover Lambda (0 = kill switch, 1 = normal limited, default = 1)"
+  default     = 1
+}
+
+variable "sec_form4_parser_concurrency" {
+  type        = number
+  description = "Reserved concurrency for sec-form4-parser Lambda (0 = kill switch, 1 = normal limited, default = 1)"
+  default     = 1
+}

@@ -27,11 +27,10 @@ resource "aws_lambda_function" "parser_13f" {
     }
   }
 
-  # ✅ GESTION DE LA CONCURRENCE :
-  # Reserved concurrency = 5 pour éviter que cette Lambda lente (60-120s) bloque tout le pool
-  # ⚠️ TEMPORAIREMENT DÉSACTIVÉ : La limite de compte est encore à 10
-  # Une fois la limite augmentée à 1000 (via AWS Console ou script), décommenter :
-  # reserved_concurrent_executions = 5
+  # 🛡️ KILL SWITCH: Reserved concurrency (1 = normal limité, 0 = arrêt complet)
+  # Variable: parser_13f_concurrency (défaut = 1)
+  # Note: Cette Lambda est lente (60-120s), donc concurrency = 1 évite de bloquer le pool
+  reserved_concurrent_executions = var.parser_13f_concurrency
 }
 
 # IAM Role
@@ -104,9 +103,12 @@ resource "aws_lambda_event_source_mapping" "parser_13f_sqs" {
   event_source_arn = aws_sqs_queue.parser_13f_queue.arn
   function_name    = aws_lambda_function.parser_13f.arn
   batch_size       = 1 # Traiter 1 message à la fois (parsing lourd)
-  enabled          = true
+  enabled          = false # 🛑 DÉSACTIVÉ
 
   # Si la Lambda expire (15 min), le message retourne dans la file pour retry
   maximum_batching_window_in_seconds = 0
+  
+  # ⚠️ IMPORTANT: Activer reportBatchItemFailures pour retry uniquement les messages échoués
+  function_response_types = ["ReportBatchItemFailures"]
 }
 

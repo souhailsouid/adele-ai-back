@@ -20,46 +20,57 @@ if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
 async function sendAlertsForRecentSignals() {
   console.log('🔍 Récupération des Top Signals récents...');
   
+  // Filtrer seulement les transactions du jour (pas l'historique)
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  console.log(`📅 Filtre: Seulement les transactions du ${todayStr} (UTC)`);
+  
   // Récupérer les 10 derniers signals uniques avec score >= 8
   // Grouper par (insider_name, ticker, transaction_date, total_value) pour éviter les doublons
+  // FILTRE: Seulement les transactions du jour actuel
   const query = `
-    SELECT 
-      ts.id,
-      ts.company_id,
-      ts.filing_id,
-      ts.insider_name,
-      ts.insider_cik,
-      ts.insider_title,
-      ts.relation,
-      ts.transaction_type,
-      ts.shares,
-      ts.price_per_share,
-      ts.total_value,
-      CAST(ts.transaction_date AS VARCHAR) as transaction_date,
-      ts.signal_score,
-      CAST(ts.created_at AS VARCHAR) as created_at,
-      c.ticker,
-      c.name as company_name,
-      cf.accession_number,
-      CAST(cf.filing_date AS VARCHAR) as filing_date,
-      ROW_NUMBER() OVER (
-        PARTITION BY ts.insider_name, c.ticker, ts.transaction_date, ts.total_value 
-        ORDER BY ts.created_at DESC
-      ) as row_num
-    FROM top_insider_signals ts
-    LEFT JOIN companies c ON ts.company_id = c.id
-    LEFT JOIN company_filings cf ON ts.filing_id = cf.id
-    WHERE ts.signal_score >= 8
-  ) ranked
-  WHERE row_num = 1
-  ORDER BY transaction_date DESC, created_at DESC
-  LIMIT 10
+    WITH ranked AS (
+      SELECT 
+        ts.id,
+        ts.company_id,
+        ts.filing_id,
+        ts.insider_name,
+        ts.insider_cik,
+        ts.insider_title,
+        ts.relation,
+        ts.transaction_type,
+        ts.shares,
+        ts.price_per_share,
+        ts.total_value,
+        CAST(ts.transaction_date AS VARCHAR) as transaction_date,
+        ts.signal_score,
+        CAST(ts.created_at AS VARCHAR) as created_at,
+        c.ticker,
+        c.name as company_name,
+        cf.accession_number,
+        CAST(cf.filing_date AS VARCHAR) as filing_date,
+        ROW_NUMBER() OVER (
+          PARTITION BY ts.insider_name, c.ticker, ts.transaction_date, ts.total_value 
+          ORDER BY ts.created_at DESC
+        ) as row_num
+      FROM top_insider_signals ts
+      LEFT JOIN companies c ON ts.company_id = c.id
+      LEFT JOIN company_filings cf ON ts.filing_id = cf.id
+      WHERE ts.signal_score >= 8
+        AND CAST(ts.transaction_date AS DATE) = DATE '${todayStr}'
+    )
+    SELECT * FROM ranked
+    WHERE row_num = 1
+    ORDER BY transaction_date DESC, created_at DESC
+    LIMIT 10
   `;
 
   const results = await executeAthenaQuery(query);
   
   if (results.length === 0) {
-    console.log('⚠️  Aucun signal trouvé avec score >= 8');
+    console.log(`⚠️  Aucun signal trouvé avec score >= 8 pour aujourd'hui (${todayStr})`);
     return;
   }
 

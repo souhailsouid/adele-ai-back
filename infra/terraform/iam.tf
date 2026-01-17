@@ -112,3 +112,120 @@ resource "aws_iam_role_policy_attachment" "api_s3_attach" {
   role       = aws_iam_role.api_lambda_role.name
   policy_arn = aws_iam_policy.api_s3_policy.arn
 }
+
+# ============================================
+# Permissions pour le monitoring AWS (Dashboard Admin)
+# ============================================
+
+# Policy pour Lambda monitoring
+data "aws_iam_policy_document" "api_lambda_monitoring" {
+  statement {
+    actions = [
+      "lambda:ListFunctions",
+      "lambda:GetFunction",
+      "lambda:GetFunctionConcurrency",
+    ]
+    resources = [
+      "arn:aws:lambda:${var.region}:*:function:${var.project}-${var.stage}-*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "api_lambda_monitoring_policy" {
+  name   = "${var.project}-${var.stage}-api-lambda-monitoring"
+  policy = data.aws_iam_policy_document.api_lambda_monitoring.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_lambda_monitoring_attach" {
+  role       = aws_iam_role.api_lambda_role.name
+  policy_arn = aws_iam_policy.api_lambda_monitoring_policy.arn
+}
+
+# Policy pour SQS monitoring
+data "aws_iam_policy_document" "api_sqs_monitoring" {
+  statement {
+    actions = [
+      "sqs:ListQueues",
+      "sqs:GetQueueAttributes",
+      "sqs:ReceiveMessage",
+    ]
+    resources = [
+      "arn:aws:sqs:${var.region}:*:${var.project}-${var.stage}-*",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "api_sqs_monitoring_policy" {
+  name   = "${var.project}-${var.stage}-api-sqs-monitoring"
+  policy = data.aws_iam_policy_document.api_sqs_monitoring.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_sqs_monitoring_attach" {
+  role       = aws_iam_role.api_lambda_role.name
+  policy_arn = aws_iam_policy.api_sqs_monitoring_policy.arn
+}
+
+# Policy pour CloudWatch monitoring
+data "aws_iam_policy_document" "api_cloudwatch_monitoring" {
+  statement {
+    actions = [
+      "cloudwatch:GetMetricStatistics",
+      "cloudwatch:ListMetrics",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "api_cloudwatch_monitoring_policy" {
+  name   = "${var.project}-${var.stage}-api-cloudwatch-monitoring"
+  policy = data.aws_iam_policy_document.api_cloudwatch_monitoring.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_cloudwatch_monitoring_attach" {
+  role       = aws_iam_role.api_lambda_role.name
+  policy_arn = aws_iam_policy.api_cloudwatch_monitoring_policy.arn
+}
+
+# Policy pour Athena monitoring (ajouter GetWorkGroup)
+data "aws_iam_policy_document" "api_athena_monitoring" {
+  statement {
+    actions = [
+      "athena:GetWorkGroup",
+      "athena:ListWorkGroups",
+    ]
+    resources = [
+      "arn:aws:athena:${var.region}:*:workgroup/${var.project}-${var.stage}-workgroup",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "api_athena_monitoring_policy" {
+  name   = "${var.project}-${var.stage}-api-athena-monitoring"
+  policy = data.aws_iam_policy_document.api_athena_monitoring.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_athena_monitoring_attach" {
+  role       = aws_iam_role.api_lambda_role.name
+  policy_arn = aws_iam_policy.api_athena_monitoring_policy.arn
+}
+
+# Policy pour Budgets monitoring
+data "aws_iam_policy_document" "api_budgets_monitoring" {
+  statement {
+    actions = [
+      "budgets:DescribeBudget",
+      "budgets:DescribeBudgets",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "api_budgets_monitoring_policy" {
+  name   = "${var.project}-${var.stage}-api-budgets-monitoring"
+  policy = data.aws_iam_policy_document.api_budgets_monitoring.json
+}
+
+resource "aws_iam_role_policy_attachment" "api_budgets_monitoring_attach" {
+  role       = aws_iam_role.api_lambda_role.name
+  policy_arn = aws_iam_policy.api_budgets_monitoring_policy.arn
+}

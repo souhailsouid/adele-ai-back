@@ -45,5 +45,8 @@ resource "aws_lambda_event_source_mapping" "notification_generator_sqs" {
   event_source_arn = aws_sqs_queue.collectors_queue.arn
   function_name    = aws_lambda_function.notification_generator.arn
   batch_size       = 1 # Traiter 1 message à la fois
-  enabled          = true
+  enabled          = false # 🛑 DÉSACTIVÉ
+  
+  # ⚠️ IMPORTANT: Activer reportBatchItemFailures pour retry uniquement les messages échoués
+  function_response_types = ["ReportBatchItemFailures"]
 }

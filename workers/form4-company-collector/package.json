@@ -1,0 +1,19 @@
+{
+  "name": "form4-company-collector",
+  "version": "1.0.0",
+  "description": "Collector Form 4 par entreprise (flux Atom RSS spécifique)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "bundle": "npm run build && npm run zip",
+    "zip": "cd dist && zip -r ../form4-company-collector.zip ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  }
+}

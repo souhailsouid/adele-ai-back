@@ -7,6 +7,22 @@ import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { getDashboardMetrics, getPendingRetries, getUnparsedFiles } from "../services/admin/adminService";
 import { getJob, getJobsByStatus, type JobStatus } from "../services/admin/queueService";
 import { getCronStatus, getAllCrons, setCronActive } from "../services/admin/cronService";
+import { 
+  getAWSInfrastructureStatus, 
+  getLambdaStatuses, 
+  getSQSQueueStatuses, 
+  getLambdaMetrics,
+  getAthenaStatus,
+  getBudgetStatuses 
+} from "../services/admin/awsMonitoringService";
+import { 
+  getAWSInfrastructureStatus, 
+  getLambdaStatuses, 
+  getSQSQueueStatuses, 
+  getLambdaMetrics,
+  getAthenaStatus,
+  getBudgetStatuses 
+} from "../services/admin/awsMonitoringService";
 
 function getPathParam(event: APIGatewayProxyEventV2, key: string): string | undefined {
   return event.pathParameters?.[key];
@@ -120,6 +136,59 @@ export const adminRoutes = [
 
       await setCronActive(cronId, isActive);
       return { success: true, cron_id: cronId, is_active: isActive };
+    },
+  },
+
+  // ========== AWS Infrastructure Monitoring ==========
+  {
+    method: "GET",
+    path: "/admin/aws/infrastructure",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      return await getAWSInfrastructureStatus();
+    },
+  },
+
+  {
+    method: "GET",
+    path: "/admin/aws/lambdas",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      return await getLambdaStatuses();
+    },
+  },
+
+  {
+    method: "GET",
+    path: "/admin/aws/lambdas/{functionName}/metrics",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      const functionName = getPathParam(event, "functionName");
+      if (!functionName) throw new Error("Missing functionName parameter");
+      
+      const metrics = await getLambdaMetrics([functionName]);
+      return metrics[0] || null;
+    },
+  },
+
+  {
+    method: "GET",
+    path: "/admin/aws/sqs/queues",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      return await getSQSQueueStatuses();
+    },
+  },
+
+  {
+    method: "GET",
+    path: "/admin/aws/athena",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      return await getAthenaStatus();
+    },
+  },
+
+  {
+    method: "GET",
+    path: "/admin/aws/budgets",
+    handler: async (event: APIGatewayProxyEventV2) => {
+      return await getBudgetStatuses();
     },
   },
 ];

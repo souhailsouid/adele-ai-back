@@ -12,8 +12,13 @@
         "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
     },
     "dependencies": {
+        "@aws-sdk/client-athena": "^3.968.0",
+        "@aws-sdk/client-budgets": "^3.968.0",
+        "@aws-sdk/client-cloudwatch": "^3.968.0",
         "@aws-sdk/client-dynamodb": "^3.968.0",
         "@aws-sdk/client-eventbridge": "^3.632.0",
+        "@aws-sdk/client-lambda": "^3.968.0",
+        "@aws-sdk/client-sqs": "^3.968.0",
         "@aws-sdk/lib-dynamodb": "^3.968.0",
         "@supabase/supabase-js": "^2.39.0",
         "@types/uuid": "^10.0.0",

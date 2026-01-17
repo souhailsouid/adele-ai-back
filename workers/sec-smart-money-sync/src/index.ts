@@ -28,7 +28,8 @@ const FORM4_PARSER_QUEUE_URL = process.env.FORM4_PARSER_QUEUE_URL || "";
 const SEC_EDGAR_BASE_URL = 'https://www.sec.gov';
 const SEC_SUBMISSIONS_API_BASE_URL = 'https://data.sec.gov/submissions';
 const USER_AGENT = 'ADEL AI (contact@adel.ai)';
-const RATE_LIMIT_DELAY = 100; // 100ms entre requêtes = 10 req/s
+const RATE_LIMIT_DELAY = 100; // 100ms entre requêtes SEC API = 10 req/s
+const ATHENA_QUERY_DELAY = 500; // 500ms entre requêtes Athena (évite TooManyRequestsException)
 
 export const handler = async (event: SQSEvent) => {
   console.log("SEC Smart Money Sync triggered via SQS");
@@ -83,8 +84,14 @@ export const handler = async (event: SQSEvent) => {
 
 /**
  * Exécuter une requête Athena
+ * 
+ * ⚠️ COST SAFETY: Throttling strict (1 requête à la fois, 500ms entre requêtes)
+ * Évite les TooManyRequestsException et limite les coûts
  */
 async function executeAthenaQuery(query: string): Promise<any[]> {
+  // Throttling: attendre avant de lancer une nouvelle requête
+  await sleep(ATHENA_QUERY_DELAY);
+
   const startCommand = new StartQueryExecutionCommand({
     QueryString: query,
     QueryExecutionContext: {
@@ -467,6 +474,8 @@ async function processForm4Filing(companyId: number, cik: string, filing: any): 
  * 
  * Récupère tous les CIK de dirigeants uniques et suit leurs transactions
  * dans toutes les entreprises où ils sont actifs (Form 3, 4, 5)
+ * 
+ * ⚠️ OPTIMISATION COÛT: Utilise batch queries pour éviter N requêtes Athena unitaires
  */
 async function syncInsiderCrossCompany(): Promise<void> {
   console.log('═══════════════════════════════════════════════════════════');
@@ -491,11 +500,13 @@ async function syncInsiderCrossCompany(): Promise<void> {
 
     console.log(`Found ${insiderCiks.length} unique insiders to track\n`);
 
+    // Collecter tous les filings de tous les dirigeants d'abord
+    const allFilings: Array<{ insiderCik: string; filing: any }> = [];
+    
     for (const insiderCik of insiderCiks) {
       try {
         console.log(`Tracking insider CIK: ${insiderCik}...`);
         
-        // Récupérer tous les filings de ce dirigeant
         const filings = await discoverInsiderFilings(insiderCik);
         
         if (filings.length === 0) {
@@ -504,19 +515,24 @@ async function syncInsiderCrossCompany(): Promise<void> {
         }
 
         console.log(`  Found ${filings.length} filings (Form 3/4/5)`);
-
-        // Traiter chaque filing
+        
         for (const filing of filings) {
-          await processInsiderFiling(insiderCik, filing);
-          await sleep(RATE_LIMIT_DELAY);
+          allFilings.push({ insiderCik, filing });
         }
-
-        console.log(`  ✅ Completed tracking for CIK ${insiderCik}\n`);
+        
         await sleep(RATE_LIMIT_DELAY);
       } catch (error: any) {
         console.error(`  ❌ Error tracking CIK ${insiderCik}:`, error.message);
       }
     }
+
+    // Traiter tous les filings en batch (optimisation coût)
+    if (allFilings.length > 0) {
+      console.log(`\n📦 Processing ${allFilings.length} filings in batch mode...\n`);
+      await processInsiderFilingsBatch(allFilings);
+    }
+
+    console.log(`\n✅ Completed tracking for ${insiderCiks.length} insiders`);
   } catch (error: any) {
     console.error(`[Cross-Company] Error fetching insider CIKs:`, error.message);
   }
@@ -567,10 +583,106 @@ async function discoverInsiderFilings(insiderCik: string): Promise<any[]> {
 }
 
 /**
- * Traiter un filing d'un dirigeant
+ * Traiter plusieurs filings en batch (optimisation coût)
+ * 
+ * ⚠️ COST SAFETY: 1 requête batch au lieu de N requêtes unitaires
  */
-async function processInsiderFiling(insiderCik: string, filing: any): Promise<void> {
-  // Extraire le CIK de l'entreprise depuis l'accession number
+async function processInsiderFilingsBatch(
+  filings: Array<{ insiderCik: string; filing: any }>
+): Promise<void> {
+  // 1. Extraire tous les CIKs uniques des entreprises
+  const companyCiks = new Set<string>();
+  const accessionNumbers = new Set<string>();
+  
+  for (const { filing } of filings) {
+    const match = filing.accessionNumber.match(/^(\d{10})-/);
+    if (match) {
+      companyCiks.add(match[1]);
+    }
+    accessionNumbers.add(filing.accessionNumber);
+  }
+
+  // 2. 1 seule requête batch pour tous les CIKs
+  const cikToIdMap = new Map<string, number>();
+  if (companyCiks.size > 0) {
+    const cikList = Array.from(companyCiks).map(cik => `'${cik.replace(/'/g, "''")}'`).join(', ');
+    const companyQuery = `
+      SELECT id, cik
+      FROM companies
+      WHERE cik IN (${cikList})
+    `;
+    
+    try {
+      const companies = await executeAthenaQuery(companyQuery);
+      for (const row of companies) {
+        cikToIdMap.set(row[1], parseInt(row[0], 10));
+      }
+      console.log(`  ✅ Found ${cikToIdMap.size} companies (out of ${companyCiks.size} unique CIKs)`);
+    } catch (error: any) {
+      console.error(`[Batch] Error fetching companies:`, error.message);
+    }
+  }
+
+  // 3. 1 seule requête batch pour vérifier les filings existants (de-dup)
+  const existingFilings = new Set<string>();
+  if (accessionNumbers.size > 0) {
+    const accessionList = Array.from(accessionNumbers).map(acc => `'${acc.replace(/'/g, "''")}'`).join(', ');
+    const filingQuery = `
+      SELECT DISTINCT accession_number
+      FROM company_filings
+      WHERE accession_number IN (${accessionList})
+    `;
+    
+    try {
+      const results = await executeAthenaQuery(filingQuery);
+      for (const row of results) {
+        existingFilings.add(row[0]);
+      }
+      console.log(`  ✅ Found ${existingFilings.size} existing filings (out of ${accessionNumbers.size} total)`);
+    } catch (error: any) {
+      console.warn(`[Batch] Could not check existing filings:`, error.message);
+    }
+  }
+
+  // 4. Traiter chaque filing avec les données batch
+  let processed = 0;
+  let skipped = 0;
+  
+  for (const { insiderCik, filing } of filings) {
+    // De-dup: Vérifier si filing existe déjà
+    if (existingFilings.has(filing.accessionNumber)) {
+      skipped++;
+      continue;
+    }
+
+    const match = filing.accessionNumber.match(/^(\d{10})-/);
+    const companyCik = match ? match[1] : null;
+    const companyId = companyCik ? cikToIdMap.get(companyCik) : null;
+
+    if (!companyId) {
+      skipped++;
+      continue;
+    }
+
+    await processInsiderFilingWithId(insiderCik, filing, companyId);
+    processed++;
+    
+    if (processed % 10 === 0) {
+      await sleep(RATE_LIMIT_DELAY);
+    }
+  }
+
+  console.log(`\n  📊 Batch complete: ${processed} processed, ${skipped} skipped`);
+}
+
+/**
+ * Traiter un filing d'un dirigeant (version avec companyId déjà résolu)
+ */
+async function processInsiderFilingWithId(
+  insiderCik: string,
+  filing: any,
+  companyId: number
+): Promise<void> {
   const companyCikMatch = filing.accessionNumber.match(/^(\d{10})-/);
   const companyCik = companyCikMatch ? companyCikMatch[1] : null;
 
@@ -579,67 +691,19 @@ async function processInsiderFiling(insiderCik: string, filing: any): Promise<vo
     return;
   }
 
-  // Chercher l'entreprise par CIK
-  let companyId: number | null = null;
-  try {
-    const companyQuery = `
-      SELECT id
-      FROM companies
-      WHERE cik = '${companyCik}'
-      LIMIT 1
-    `;
-    const companies = await executeAthenaQuery(companyQuery);
-    if (companies && companies.length > 0) {
-      companyId = parseInt(companies[0][0], 10);
-    }
-  } catch (error: any) {
-    console.warn(`[Insider Filing] Could not find company for CIK ${companyCik}:`, error.message);
-  }
+  // Créer le filing (de-dup déjà fait en batch)
+  const filingData = {
+    company_id: companyId,
+    cik: companyCik,
+    form_type: filing.formType,
+    accession_number: filing.accessionNumber,
+    filing_date: filing.filingDate,
+    document_url: '',
+    status: 'DISCOVERED',
+  };
 
-  if (!companyId) {
-    console.log(`    Skipping ${filing.accessionNumber} (company CIK ${companyCik} not in database)`);
-    return;
-  }
-
-  // Vérifier si le filing existe déjà
-  let filingId: number | null = null;
-  try {
-    const checkQuery = `
-      SELECT id, status
-      FROM company_filings
-      WHERE accession_number = '${filing.accessionNumber.replace(/'/g, "''")}'
-        AND form_type = '${filing.formType}'
-      LIMIT 1
-    `;
-    const existing = await executeAthenaQuery(checkQuery);
-    
-    if (existing && existing.length > 0) {
-      filingId = parseInt(existing[0][0], 10);
-      const status = existing[0][1];
-      if (status === 'PARSED') {
-        console.log(`    Skipping ${filing.accessionNumber} (already parsed)`);
-        return;
-      }
-    }
-  } catch (error: any) {
-    console.warn(`[Insider Filing] Could not check existing filing: ${error.message}`);
-  }
-
-  // Créer le filing si nécessaire
-  if (!filingId) {
-    const filingData = {
-      company_id: companyId,
-      cik: companyCik,
-      form_type: filing.formType,
-      accession_number: filing.accessionNumber,
-      filing_date: filing.filingDate,
-      document_url: '',
-      status: 'DISCOVERED',
-    };
-
-    const result = await insertRowS3('company_filings', filingData);
-    filingId = result.id;
-  }
+  const result = await insertRowS3('company_filings', filingData);
+  const filingId = result.id;
 
   // Parser le Form 4 uniquement (Form 3 et 5 nécessitent des parsers différents)
   if (filing.formType === '4' && FORM4_PARSER_QUEUE_URL) {
@@ -655,12 +719,9 @@ async function processInsiderFiling(insiderCik: string, filing: any): Promise<vo
         }),
         DelaySeconds: 0,
       }));
-      console.log(`    📤 Published Form 4 to parsing queue: ${filing.accessionNumber}`);
     } catch (error: any) {
       console.error(`    ❌ Error publishing to queue:`, error.message);
     }
-  } else {
-    console.log(`    ⚠️  Form ${filing.formType} parsing not yet implemented`);
   }
 }
 

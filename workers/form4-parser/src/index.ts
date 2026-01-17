@@ -106,13 +106,250 @@ const SEC_EDGAR_BASE_URL = 'https://www.sec.gov';
 const USER_AGENT = 'ADEL AI (contact@adel.ai)';
 const RATE_LIMIT_DELAY = 100; // 100ms entre requêtes = 10 req/s (strict)
 
+/**
+ * Schémas Parquet pour companies et company_filings
+ */
+const COMPANIES_SCHEMA = new ParquetSchema({
+  id: { type: 'INT64', optional: false },
+  ticker: { type: 'UTF8', optional: true },
+  cik: { type: 'UTF8', optional: true },
+  name: { type: 'UTF8', optional: true },
+  sector: { type: 'UTF8', optional: true },
+  industry: { type: 'UTF8', optional: true },
+  market_cap: { type: 'INT64', optional: true },
+  headquarters_country: { type: 'UTF8', optional: true },
+  headquarters_state: { type: 'UTF8', optional: true },
+  sic_code: { type: 'UTF8', optional: true },
+  category: { type: 'UTF8', optional: true },
+  created_at: { type: 'TIMESTAMP_MILLIS', optional: true },
+  updated_at: { type: 'TIMESTAMP_MILLIS', optional: true },
+});
+
+const COMPANY_FILINGS_SCHEMA = new ParquetSchema({
+  id: { type: 'INT64', optional: false },
+  company_cik: { type: 'UTF8', optional: false },
+  cik: { type: 'UTF8', optional: true },
+  form_type: { type: 'UTF8', optional: true },
+  accession_number: { type: 'UTF8', optional: true },
+  filing_date: { type: 'DATE', optional: true },
+  period_of_report: { type: 'DATE', optional: true },
+  document_url: { type: 'UTF8', optional: true },
+  status: { type: 'UTF8', optional: true },
+  created_at: { type: 'TIMESTAMP_MILLIS', optional: true },
+  updated_at: { type: 'TIMESTAMP_MILLIS', optional: true },
+});
+
+/**
+ * Résoudre company_cik et filingId depuis le message
+ * Trouve ou crée la company et le filing si nécessaire
+ */
+async function resolveCompanyAndFiling(message: Form4ParsingMessage): Promise<{ company_cik: string; filingId: number }> {
+  const { cik, accessionNumber, companyName, filingDate } = message;
+  const cikPadded = String(cik || '').padStart(10, '0');
+  
+  // 1. Trouver ou créer la company
+  let company_cik: string = cikPadded;
+  try {
+    const companyQuery = `
+      SELECT id, ticker, name, cik
+      FROM companies
+      WHERE cik = '${cikPadded.replace(/'/g, "''")}'
+      LIMIT 1
+    `;
+    const companyResults = await executeAthenaQuery(companyQuery);
+    
+    if (companyResults.length > 0) {
+      company_cik = companyResults[0].cik || cikPadded;
+      console.log(`[Form4 Parser] Found existing company: CIK=${company_cik}, ticker=${companyResults[0].ticker}`);
+    } else {
+      // Créer la company si elle n'existe pas
+      console.log(`[Form4 Parser] Company not found, creating new company for CIK ${cikPadded}`);
+      const companyId = generateId();
+      const now = new Date();
+      const companyData = {
+        id: companyId,
+        cik: cikPadded,
+        name: companyName || `Company CIK ${cikPadded}`,
+        ticker: null,
+        created_at: now.toISOString(),
+      };
+      
+      // Écrire dans S3 Parquet
+      await writeToS3Parquet('companies', [companyData], COMPANIES_SCHEMA);
+      console.log(`[Form4 Parser] Created company: CIK=${company_cik}`);
+    }
+  } catch (error: any) {
+    console.error(`[Form4 Parser] Error resolving company: ${error.message}`);
+    throw new Error(`Failed to resolve company for CIK ${cikPadded}: ${error.message}`);
+  }
+  
+  // 2. Trouver ou créer le filing
+  let filingId: number;
+  try {
+    const filingQuery = `
+      SELECT id, status
+      FROM company_filings
+      WHERE accession_number = '${accessionNumber.replace(/'/g, "''")}'
+        AND form_type = '4'
+      LIMIT 1
+    `;
+    const filingResults = await executeAthenaQuery(filingQuery);
+    
+    if (filingResults.length > 0) {
+      filingId = parseInt(filingResults[0].id, 10);
+      console.log(`[Form4 Parser] Found existing filing: ID=${filingId}, status=${filingResults[0].status}`);
+    } else {
+      // Créer le filing si il n'existe pas
+      console.log(`[Form4 Parser] Filing not found, creating new filing for ${accessionNumber}`);
+      
+      // Parser la date du filing
+      let parsedFilingDate: Date;
+      if (filingDate) {
+        try {
+          parsedFilingDate = new Date(filingDate);
+        } catch {
+          parsedFilingDate = new Date();
+        }
+      } else {
+        parsedFilingDate = new Date();
+      }
+      
+      filingId = generateId();
+      const now = new Date();
+      const filingData = {
+        id: filingId,
+        company_cik: cikPadded,
+        cik: cikPadded,
+        form_type: '4',
+        accession_number: accessionNumber,
+        filing_date: parsedFilingDate,
+        status: 'DISCOVERED',
+        created_at: now.toISOString(),
+      };
+      
+      // Écrire dans S3 Parquet
+      await writeToS3Parquet('company_filings', [filingData], COMPANY_FILINGS_SCHEMA);
+      console.log(`[Form4 Parser] Created filing: ID=${filingId}, accession=${accessionNumber}`);
+    }
+  } catch (error: any) {
+    console.error(`[Form4 Parser] Error resolving filing: ${error.message}`);
+    throw new Error(`Failed to resolve filing for ${accessionNumber}: ${error.message}`);
+  }
+  
+  return { company_cik, filingId };
+}
+
+/**
+ * Fonction générique pour écrire dans S3 Parquet
+ */
+async function writeToS3Parquet(tableName: string, rows: any[], schema: ParquetSchema): Promise<void> {
+  if (rows.length === 0) return;
+  
+  // Déterminer la partition (year/month) depuis created_at
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
+  
+  await writeToS3ParquetInPartition(tableName, rows, schema, year, month);
+}
+
+/**
+ * Fonction générique pour écrire dans S3 Parquet avec partition spécifiée
+ */
+async function writeToS3ParquetInPartition(tableName: string, rows: any[], schema: ParquetSchema, year: number, month: number): Promise<void> {
+  if (rows.length === 0) return;
+  
+  try {
+    const tempDir = os.tmpdir();
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(7);
+    const tempFilePath = path.join(tempDir, `${tableName}_${timestamp}_${randomSuffix}.parquet`);
+    
+    // Écrire le fichier Parquet
+    const writer = await ParquetWriter.openFile(schema, tempFilePath);
+    
+    for (const row of rows) {
+      const parquetRow = {
+        ...row,
+        created_at: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        updated_at: row.updated_at ? new Date(row.updated_at).getTime() : (row.created_at ? new Date(row.created_at).getTime() : Date.now()),
+        filing_date: row.filing_date ? (row.filing_date instanceof Date ? row.filing_date : new Date(row.filing_date)) : null,
+      };
+      await writer.appendRow(parquetRow);
+    }
+    
+    await writer.close();
+    
+    // Uploader sur S3
+    const fileBuffer = fs.readFileSync(tempFilePath);
+    const s3Key = `data/${tableName}/year=${year}/month=${month}/batch_${timestamp}_${randomSuffix}.parquet`;
+    
+    await s3Client.send(new PutObjectCommand({
+      Bucket: S3_DATA_LAKE_BUCKET,
+      Key: s3Key,
+      Body: fileBuffer,
+      ContentType: 'application/octet-stream',
+    }));
+    
+    // Nettoyer
+    fs.unlinkSync(tempFilePath);
+    
+    console.log(`[S3 Write] ✅ Wrote ${rows.length} ${tableName} to ${s3Key}`);
+  } catch (error: any) {
+    console.error(`[S3 Write] ❌ Error writing ${tableName}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Vérifier si un Form 4 a déjà été traité (déduplication)
+ * Vérifie dans company_filings si le filing existe déjà avec status='PARSED'
+ * ou si l'accession_number existe déjà dans insider_trades
+ */
+async function checkIfForm4AlreadyParsed(filingId: number, accessionNumber: string): Promise<boolean> {
+  try {
+    // Vérifier d'abord si le filing est déjà parsé
+    if (filingId) {
+      const filingQuery = `
+        SELECT status
+        FROM company_filings
+        WHERE id = ${filingId} AND status = 'PARSED'
+        LIMIT 1
+      `;
+      const filingResults = await executeAthenaQuery(filingQuery);
+      if (filingResults.length > 0) {
+        return true; // Déjà parsé
+      }
+    }
+    
+    // Vérifier aussi par accession_number dans les transactions
+    const transactionQuery = `
+      SELECT COUNT(*) as count
+      FROM insider_trades it
+      INNER JOIN company_filings cf ON it.filing_id = cf.id
+      WHERE cf.accession_number = '${accessionNumber.replace(/'/g, "''")}'
+      LIMIT 1
+    `;
+    const transactionResults = await executeAthenaQuery(transactionQuery);
+    const count = parseInt(transactionResults[0]?.count || '0');
+    return count > 0;
+  } catch (error: any) {
+    // En cas d'erreur (table vide, etc.), on continue quand même
+    console.warn(`[Form4 Parser] Warning checking deduplication: ${error.message}`);
+    return false; // Si erreur, on traite quand même (pas de blocage)
+  }
+}
+
 interface Form4ParsingMessage {
-  companyId: number;
-  filingId: number;
+  company_cik?: string; // Optionnel - sera trouvé/créé si absent
+  filingId?: number; // Optionnel - sera trouvé/créé si absent
   accessionNumber: string;
   cik: string;
+  companyName?: string; // Pour créer la company si elle n'existe pas
   primaryDocument?: string;
+  filingDate?: string; // Date du filing depuis l'Atom feed
   retryCount?: number;
+  sourceType?: 'COMPANY_FEED' | 'INSIDER_FEED' | 'ATOM_FEED'; // Provenance du Form 4
 }
 
 export const handler = async (event: SQSEvent) => {
@@ -128,13 +365,35 @@ export const handler = async (event: SQSEvent) => {
       
       console.log("Processing Form 4:", {
         messageId: record.messageId,
-        companyId: message.companyId,
+        company_cik: message.company_cik,
         filingId: message.filingId,
         accessionNumber: message.accessionNumber,
+        cik: message.cik,
       });
 
+      // Si company_cik ou filingId manquent, les trouver/créer
+      let company_cik = message.company_cik;
+      let filingId = message.filingId;
+      
+      if (!company_cik || !filingId) {
+        const resolved = await resolveCompanyAndFiling(message);
+        company_cik = resolved.company_cik;
+        filingId = resolved.filingId;
+        
+        console.log(`[Form4 Parser] Resolved: company_cik=${company_cik}, filingId=${filingId}`);
+      }
+
+      // Vérifier la déduplication avant de parser
+      if (filingId) {
+        const alreadyParsed = await checkIfForm4AlreadyParsed(filingId, message.accessionNumber);
+        if (alreadyParsed) {
+          console.log(`[Form4 Parser] ⚠️ Skipping duplicate: ${message.accessionNumber} (filing ${filingId} already processed)`);
+          continue; // Skip ce message, déjà traité
+        }
+      }
+
       // Parser le Form 4 avec rate limiting
-      await parseForm4(message);
+      await parseForm4({ ...message, company_cik: message.company_cik, filingId });
 
       // Rate limiting: attendre 100ms avant de traiter le prochain message
       // (SQS gère déjà le batch, mais on veut être sûr)
@@ -183,14 +442,115 @@ export const handler = async (event: SQSEvent) => {
 };
 
 /**
+ * Parser l'index HTML pour trouver le fichier XML Form 4
+ * Parse le tableau HTML pour trouver la ligne avec:
+ * - Description = "FORM 4"
+ * - Type = 4
+ * - Document se terminant par .xml
+ */
+async function findXmlFileFromIndex(cikPadded: string, accessionClean: string, accessionNumber: string): Promise<string | null> {
+  const indexUrl = `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${accessionNumber}-index.htm`;
+  
+  try {
+    await sleep(RATE_LIMIT_DELAY);
+    console.log(`[Form4 Parser] Fetching index: ${indexUrl}`);
+    
+    const response = await fetch(indexUrl, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept': 'text/html, */*',
+      },
+    });
+    
+    if (!response.ok) {
+      console.warn(`[Form4 Parser] Index not found (${response.status}), will use fallback URLs`);
+      return null;
+    }
+    
+    const htmlContent = await response.text();
+    
+    // Parser le tableau HTML ligne par ligne
+    // Format: <tr><td>Seq</td><td>Description</td><td>Document</td><td>Type</td><td>Size</td></tr>
+    // On cherche: Description="FORM 4", Type="4", Document se terminant par .xml
+    // Priorité: Fichier direct (sans sous-dossier xslF345X*) > Fichier dans sous-dossier
+    
+    const foundUrls: Array<{ url: string; isDirect: boolean }> = [];
+    
+    // Regex pour capturer chaque ligne <tr> avec ses colonnes
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    
+    while ((rowMatch = rowRegex.exec(htmlContent)) !== null) {
+      const rowContent = rowMatch[1];
+      
+      // Extraire les colonnes (td)
+      const tdMatches = rowContent.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      if (!tdMatches || tdMatches.length < 4) continue;
+      
+      // Colonne 1: Seq (ignorée)
+      // Colonne 2: Description
+      const descriptionMatch = tdMatches[1]?.match(/>([^<]+)</);
+      const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+      
+      // Colonne 3: Document (lien)
+      const documentMatch = tdMatches[2]?.match(/href=["']([^"']+)["']/);
+      const documentHref = documentMatch ? documentMatch[1] : '';
+      
+      // Colonne 4: Type
+      const typeMatch = tdMatches[3]?.match(/>([^<]+)</);
+      const type = typeMatch ? typeMatch[1].trim() : '';
+      
+      // Vérifier les critères: Description="FORM 4", Type="4", Document (href) se terminant par .xml
+      // IMPORTANT: Vérifier le href, pas le texte du lien (le texte peut être .html alors que le href est .xml)
+      if (description === 'FORM 4' && type === '4' && documentHref && documentHref.endsWith('.xml')) {
+        // Construire l'URL complète
+        let fullUrl: string;
+        if (documentHref.startsWith('http://') || documentHref.startsWith('https://')) {
+          fullUrl = documentHref;
+        } else if (documentHref.startsWith('/Archives/edgar/data/')) {
+          fullUrl = `${SEC_EDGAR_BASE_URL}${documentHref}`;
+        } else {
+          fullUrl = `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${documentHref}`;
+        }
+        
+        // Vérifier si c'est un fichier direct (sans sous-dossier xslF345X*)
+        const isDirect = !fullUrl.includes('/xslF345X');
+        foundUrls.push({ url: fullUrl, isDirect });
+        console.log(`[Form4 Parser] Found XML file in index: ${fullUrl} (Direct: ${isDirect})`);
+      }
+    }
+    
+    // Retourner le fichier direct en priorité, sinon le premier trouvé
+    if (foundUrls.length > 0) {
+      // Trier: fichiers directs en premier
+      foundUrls.sort((a, b) => {
+        if (a.isDirect && !b.isDirect) return -1;
+        if (!a.isDirect && b.isDirect) return 1;
+        return 0;
+      });
+      
+      const bestUrl = foundUrls[0].url;
+      console.log(`[Form4 Parser] ✅ Selected XML file: ${bestUrl} (from ${foundUrls.length} candidate(s))`);
+      return bestUrl;
+    }
+    
+    console.warn(`[Form4 Parser] No XML file found in index matching criteria (FORM 4, Type 4, .xml extension)`);
+    return null;
+  } catch (error: any) {
+    console.warn(`[Form4 Parser] Error parsing index: ${error.message}, will use fallback URLs`);
+    return null;
+  }
+}
+
+/**
  * Parser un Form 4
  */
 async function parseForm4(message: Form4ParsingMessage): Promise<void> {
-  const { companyId, filingId, accessionNumber, cik, primaryDocument } = message;
+  const { company_cik, filingId, accessionNumber, cik, primaryDocument, sourceType } = message;
 
   // Log détaillé pour diagnostic
   console.log(`[Form4 Parser] Received message:`, {
-    companyId,
+    company_cik,
     filingId,
     accessionNumber,
     cik: cik,
@@ -213,10 +573,21 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
   
   const possibleUrls = [txtUrl]; // Commencer par le .txt en priorité
   
-  // Fallback: Essayer d'autres formats seulement si le .txt échoue
-  if (primaryDocument) {
-    possibleUrls.push(`${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/${primaryDocument}`);
+  // NOUVEAU: Parser l'index pour trouver le fichier XML Form 4 (Description="FORM 4", Type="4", .xml)
+  try {
+    const xmlFileFromIndex = await findXmlFileFromIndex(cikPadded, accessionClean, accessionNumber);
+    if (xmlFileFromIndex) {
+      possibleUrls.push(xmlFileFromIndex);
+      console.log(`[Form4 Parser] Added XML file from index to URL list`);
+    } else {
+      console.log(`[Form4 Parser] No XML file found in index, will use fallback URLs`);
+    }
+  } catch (error: any) {
+    console.warn(`[Form4 Parser] Error fetching index: ${error.message}, will use fallback URLs`);
   }
+  
+  // Fallback: Essayer d'autres formats seulement si le .txt et l'index échouent
+  // NOTE: On ne cherche plus primaryDocument car on parse l'index directement
   possibleUrls.push(
     // Format avec xslF345X05/form4.xml (format moderne)
     `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X05/form4.xml`,
@@ -224,8 +595,6 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
     `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X04/form4.xml`,
     // Format avec xslF345X03/form4.xml (ancien format)
     `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/xslF345X03/form4.xml`,
-    // Format alternatif avec primarydocument.xml
-    `${SEC_EDGAR_BASE_URL}/Archives/edgar/data/${cikPadded}/${accessionClean}/primarydocument.xml`,
   );
 
   // Essayer chaque URL avec rate limiting
@@ -250,6 +619,73 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
           await sleep(2000);
           continue;
         }
+        
+        // Gestion spéciale pour 404: le fichier peut ne pas être encore disponible
+        // Retry avec délai de 5 secondes (le fichier peut mettre quelques secondes à être disponible)
+        if (response.status === 404 && url === possibleUrls[0]) {
+          // Seulement pour la première URL (le .txt principal)
+          console.warn(`[Form4 Parser] 404 on primary URL ${url}, file may not be available yet. Retrying in 5 seconds...`);
+          await sleep(5000);
+          
+          // Retry une fois
+          const retryResponse = await fetch(url, {
+            headers: {
+              'User-Agent': USER_AGENT,
+              'Accept': 'application/xml, text/xml, */*',
+            },
+          });
+          
+          if (retryResponse.ok) {
+            console.log(`[Form4 Parser] ✅ Retry successful for ${url}`);
+            // Continuer avec le traitement normal
+            const xmlContent = await retryResponse.text();
+            // ... (le reste du traitement sera fait après cette condition)
+            // On va sortir de cette boucle et traiter le contenu
+            let processedXml = xmlContent;
+            if (url.endsWith('.txt')) {
+              const xmlMatch = processedXml.match(/<XML>([\s\S]*?)<\/XML>/i);
+              if (xmlMatch) {
+                processedXml = xmlMatch[1];
+              } else {
+                const ownershipMatch = processedXml.match(/(<ownershipDocument[\s\S]*<\/ownershipDocument>)/i);
+                if (ownershipMatch) {
+                  processedXml = ownershipMatch[1];
+                }
+              }
+            }
+            
+            if (processedXml.length < 500) {
+              console.warn(`[Form4 Parser] XML content is very short after retry`);
+              continue;
+            }
+            
+            if (!company_cik || !filingId) {
+              throw new Error(`Missing company_cik or filingId for ${accessionNumber}`);
+            }
+            
+            const parseResult = parseForm4XML(processedXml, company_cik, filingId);
+            const transactions = parseResult.transactions;
+            const periodOfReport = parseResult.periodOfReport;
+            
+            if (transactions.length > 0) {
+              // Ajouter source_type à chaque transaction
+              const transactionsWithSource = transactions.map(tx => ({
+                ...tx,
+                source_type: sourceType || 'ATOM_FEED', // Default si non spécifié
+              }));
+              
+              await insertInsiderTransactions(company_cik, filingId, transactionsWithSource, accessionNumber);
+              await updateFilingStatus(filingId, 'PARSED', periodOfReport);
+              console.log(`✅ Parsed Form 4 ${accessionNumber}: ${transactions.length} transactions, periodOfReport: ${periodOfReport || 'N/A'}`);
+              return;
+            }
+          } else {
+            console.warn(`[Form4 Parser] Retry also failed (${retryResponse.status}), will be picked up by next run`);
+            // Ne pas throw d'erreur, laisser le run suivant s'en occuper grâce au chevauchement de fenêtre
+            continue;
+          }
+        }
+        
         console.warn(`[Form4 Parser] URL ${url} returned ${response.status}, trying next...`);
         continue; // Essayer l'URL suivante
       }
@@ -299,24 +735,57 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
         console.warn(`[Form4 Parser] First 200 chars: ${xmlContent.substring(0, 200)}`);
       }
       
+      if (!company_cik || !filingId) {
+        throw new Error(`Missing company_cik or filingId for ${accessionNumber}`);
+      }
+      
       // Parser le XML (MÊME LOGIQUE QUE LE SCRIPT LOCAL)
-      const transactions = parseForm4XML(xmlContent, companyId, filingId);
+      const parseResult = parseForm4XML(xmlContent, company_cik, filingId);
+      const transactions = parseResult.transactions;
+      const periodOfReport = parseResult.periodOfReport;
+
+      console.log(`[Form4 Parser] Parsed ${transactions.length} transactions, periodOfReport: ${periodOfReport || 'N/A'}, company_cik: ${company_cik}, filingId: ${filingId}`);
 
       if (transactions.length > 0) {
-        // Insérer les transactions dans S3
-        await insertInsiderTransactions(companyId, filingId, transactions);
-        
-        // Mettre à jour le statut du filing
-        await updateFilingStatus(filingId, 'PARSED');
-        
-        console.log(`✅ Parsed Form 4 ${accessionNumber}: ${transactions.length} transactions`);
-        return; // Succès, on arrête
+        try {
+          console.log(`[Form4 Parser] Preparing to insert ${transactions.length} transactions...`);
+          
+          // Ajouter source_type à chaque transaction
+          const transactionsWithSource = transactions.map(tx => ({
+            ...tx,
+            source_type: sourceType || 'ATOM_FEED', // Default si non spécifié
+          }));
+          
+          console.log(`[Form4 Parser] Transactions prepared, calling insertInsiderTransactions...`);
+          
+          // Insérer les transactions dans S3
+          await insertInsiderTransactions(company_cik, filingId, transactionsWithSource, accessionNumber);
+          
+          console.log(`[Form4 Parser] Transactions inserted, updating filing status...`);
+          
+          // Mettre à jour le statut du filing et period_of_report
+          await updateFilingStatus(filingId, 'PARSED', periodOfReport);
+          
+          console.log(`✅ Parsed Form 4 ${accessionNumber}: ${transactions.length} transactions, periodOfReport: ${periodOfReport || 'N/A'}`);
+          return; // Succès, on arrête
+        } catch (insertError: any) {
+          console.error(`[Form4 Parser] ❌ Error inserting transactions: ${insertError.message}`);
+          console.error(`[Form4 Parser] Stack: ${insertError.stack}`);
+          console.error(`[Form4 Parser] Error details:`, JSON.stringify(insertError, Object.getOwnPropertyNames(insertError)));
+          // Ne pas continuer si l'insertion échoue - c'est une erreur critique
+          throw new Error(`Failed to insert transactions for ${accessionNumber}: ${insertError.message}`);
+        }
       } else {
         console.warn(`[Form4 Parser] No transactions extracted from Form 4 ${accessionNumber}`);
         // Continuer à essayer les autres URLs même si aucune transaction trouvée
       }
     } catch (error: any) {
-      console.log(`Failed to parse ${url}, trying next...`);
+      console.error(`[Form4 Parser] Error processing ${url}: ${error.message}`);
+      if (error.message.includes('Failed to insert transactions')) {
+        // Erreur critique, ne pas continuer
+        throw error;
+      }
+      console.log(`[Form4 Parser] Failed to parse ${url}, trying next...`);
       continue;
     }
   }
@@ -326,14 +795,30 @@ async function parseForm4(message: Form4ParsingMessage): Promise<void> {
 
 /**
  * Parser le XML Form 4 (MÊME LOGIQUE QUE LE SERVICE)
+ * Retourne { transactions, periodOfReport }
  */
-function parseForm4XML(xmlContent: string, companyId: number, filingId: number): any[] {
+function parseForm4XML(xmlContent: string, company_cik: string, filingId: number): { transactions: any[]; periodOfReport: string | null } {
   const transactions: any[] = [];
+  let periodOfReport: string | null = null;
 
   try {
     // Gérer les namespaces XML (ex: <edgar:rptOwnerName> ou <rptOwnerName>)
     // Supprimer les namespaces pour simplifier le parsing
     const xmlWithoutNamespaces = xmlContent.replace(/<(\/?)([^:>]+):([^>]+)>/g, '<$1$3>');
+    
+    // Extraire periodOfReport depuis le XML
+    const periodOfReportMatch = xmlWithoutNamespaces.match(/<periodOfReport[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i) ||
+                              xmlContent.match(/<periodOfReport[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i);
+    if (periodOfReportMatch && periodOfReportMatch[1]) {
+      periodOfReport = periodOfReportMatch[1].trim();
+      // Valider le format de date (YYYY-MM-DD)
+      if (periodOfReport.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        console.log(`[Form4 Parser] Extracted periodOfReport: ${periodOfReport}`);
+      } else {
+        console.warn(`[Form4 Parser] Invalid periodOfReport format: ${periodOfReport}`);
+        periodOfReport = null;
+      }
+    }
     
     // Extraire le nom du reporting owner
     // Format moderne: <rptOwnerName>Tsao David</rptOwnerName> (pas de <value> pour le nom)
@@ -403,7 +888,33 @@ function parseForm4XML(xmlContent: string, companyId: number, filingId: number):
       relationMatch = xmlContent.match(/<directorTitle[^>]*>([^<]+)<\/directorTitle>/i);
     }
     
-    const relation = relationMatch ? relationMatch[1].trim() : 'Unknown';
+    let relation = relationMatch ? relationMatch[1].trim() : 'Unknown';
+    
+    // Si pas de titre explicite, utiliser les flags isDirector, isOfficer, isTenPercentOwner
+    if (relation === 'Unknown') {
+      const isDirectorMatch = xmlWithoutNamespaces.match(/<isDirector[^>]*>([^<]+)<\/isDirector>/i);
+      const isDirector = isDirectorMatch ? isDirectorMatch[1].trim().toLowerCase() : null;
+      
+      const isOfficerMatch = xmlWithoutNamespaces.match(/<isOfficer[^>]*>([^<]+)<\/isOfficer>/i);
+      const isOfficer = isOfficerMatch ? isOfficerMatch[1].trim().toLowerCase() : null;
+      
+      const isTenPercentOwnerMatch = xmlWithoutNamespaces.match(/<isTenPercentOwner[^>]*>([^<]+)<\/isTenPercentOwner>/i);
+      const isTenPercentOwner = isTenPercentOwnerMatch ? isTenPercentOwnerMatch[1].trim().toLowerCase() : null;
+      
+      // Construire la relation à partir des flags
+      if (isDirector === 'true' || isDirector === '1') {
+        relation = 'Director';
+      } else if (isOfficer === 'true' || isOfficer === '1') {
+        relation = 'Officer';
+      } else if (isTenPercentOwner === 'true' || isTenPercentOwner === '1') {
+        relation = '10% Owner';
+      }
+      
+      // Si plusieurs flags, combiner
+      if ((isDirector === 'true' || isDirector === '1') && (isOfficer === 'true' || isOfficer === '1')) {
+        relation = 'Director and Officer';
+      }
+    }
 
     // Mettre à jour la relation pour toutes les transactions
     // Décoder les entités HTML (&amp; -> &, etc.)
@@ -422,9 +933,10 @@ function parseForm4XML(xmlContent: string, companyId: number, filingId: number):
 
   } catch (error: any) {
     console.error('[Form4 Parser] XML parsing error:', error.message);
+    return { transactions: [], periodOfReport: null };
   }
 
-  return transactions;
+  return { transactions, periodOfReport };
 }
 
 /**
@@ -470,7 +982,7 @@ function parseTransactionBlock(
 
     const price = extractNumeric('transactionPricePerShare');
     const acquiredDisposedCode = cleanXml.match(/<transactionAcquiredDisposedCode[^>]*>(?:\s*<value>)?\s*([^<\s]+)/i)?.[1];
-
+    
     // 4. LOGIQUE DE REJET (Le point sensible)
     if (!transactionDate) return null;
     
@@ -481,15 +993,34 @@ function parseTransactionBlock(
       return null;
     }
 
-    // 5. Extraire le titre du security (optionnel)
+    // 5. Extraire le titre du security (optionnel) et informations supplémentaires pour améliorer le mapping
     const securityTitleMatch = cleanXml.match(/<securityTitle[^>]*>(?:\s*<value>)?\s*([^<]+)/i);
     const securityTitle = securityTitleMatch ? securityTitleMatch[1].trim() : undefined;
+    const securityTitleLower = securityTitle ? securityTitle.toLowerCase() : '';
+    
+    // Extraire transactionAmounts pour détecter les types de transactions
+    const transactionAmountsMatch = cleanXml.match(/<transactionAmounts[^>]*>([\s\S]*?)<\/transactionAmounts>/i);
+    const transactionAmountsXml = transactionAmountsMatch ? transactionAmountsMatch[1] : '';
+    
+    // Détecter les patterns dans securityTitle et transactionAmounts pour affiner le type
+    const isAward = securityTitleLower.includes('award') || securityTitleLower.includes('restricted') || securityTitleLower.includes('rsu');
+    const isOption = securityTitleLower.includes('option') || securityTitleLower.includes('stock option');
+    const isTax = transactionAmountsXml.includes('tax') || transactionCode === 'F';
+    const isSale = transactionCode === 'S' || acquiredDisposedCode === 'D';
+    const isPurchase = transactionCode === 'P' || acquiredDisposedCode === 'A';
 
     return {
       insider_name: ownerName,
       insider_cik: ownerCik,
       relation: 'Unknown', 
-      transaction_type: mapTransactionCode(transactionCode),
+      transaction_type: mapTransactionCode(transactionCode, {
+        securityTitle,
+        isAward,
+        isOption,
+        isTax,
+        isSale,
+        isPurchase,
+      }),
       shares: Math.abs(shares),
       price_per_share: price,
       total_value: Math.abs(shares * price),
@@ -505,10 +1036,25 @@ function parseTransactionBlock(
 }
 
 /**
- * Mapper les codes de transaction (MÊME LOGIQUE QUE LE SERVICE)
+ * Mapper les codes de transaction avec enrichissement contextuel
+ * 
+ * Amélioration: Utilise le code SEC + informations contextuelles pour mapper "OTHER" vers des types plus explicites
  */
-function mapTransactionCode(code: string): string {
-  const mapping: Record<string, string> = {
+function mapTransactionCode(
+  code: string, 
+  context?: {
+    securityTitle?: string;
+    isAward?: boolean;
+    isOption?: boolean;
+    isTax?: boolean;
+    isSale?: boolean;
+    isPurchase?: boolean;
+  }
+): string {
+  const codeUpper = code.toUpperCase();
+  
+  // Mapping standard des codes SEC
+  const standardMapping: Record<string, string> = {
     'P': 'Purchase',      // Achat Open Market (LE SEUL VRAI SIGNAL)
     'S': 'Sale',          // Vente Open Market
     'M': 'Exercise',      // Conversion d'options en actions
@@ -516,9 +1062,38 @@ function mapTransactionCode(code: string): string {
     'A': 'Grant',         // Actions gratuites données par la boîte
     'G': 'Gift',          // Cadeau (Donation)
     'F': 'Tax Payment',   // Vente forcée pour payer les impôts
+    'D': 'Disposition',   // Disposition à l'émetteur
+    'I': 'Discretionary', // Transaction discrétionnaire
+    'X': 'Exercise OTM',  // Exercice d'options OTM
     'J': 'Other'          // Mouvements divers (souvent trusts)
   };
-  return mapping[code.toUpperCase()] || `Other (${code})`;
+  
+  // Si le code est mappé directement, retourner le mapping
+  if (standardMapping[codeUpper]) {
+    return standardMapping[codeUpper];
+  }
+  
+  // Enrichissement contextuel pour "OTHER" ou codes inconnus
+  if (context) {
+    if (context.isAward || context.securityTitle?.includes('award') || context.securityTitle?.includes('restricted')) {
+      return 'AWARD';
+    }
+    if (context.isOption || context.securityTitle?.includes('option')) {
+      return 'OPTION_EXERCISE';
+    }
+    if (context.isTax) {
+      return 'TAX_PAYMENT';
+    }
+    if (context.isSale) {
+      return 'SALE';
+    }
+    if (context.isPurchase) {
+      return 'PURCHASE';
+    }
+  }
+  
+  // Fallback: Retourner "OTHER" avec le code original si disponible
+  return codeUpper ? `OTHER (${codeUpper})` : 'OTHER';
 }
 
 /**
@@ -572,8 +1147,9 @@ function validateAndFormatDate(dateStr: string): string {
  * Buffer pour accumuler les transactions avant d'écrire (évite le Small File Problem)
  */
 const transactionBuffer: Array<{
-  companyId: number;
+  company_cik: string;
   filingId: number;
+  accessionNumber?: string; // Ajouter accession_number pour les top signals
   transactions: any[];
   timestamp: number;
 }> = [];
@@ -590,15 +1166,18 @@ let bufferFlushTimer: NodeJS.Timeout | null = null;
  * Écrit par batch de 50 transactions ou après 30 secondes
  */
 async function insertInsiderTransactions(
-  companyId: number,
+  company_cik: string,
   filingId: number,
-  transactions: any[]
+  transactions: any[],
+  accessionNumber?: string // Ajouter accession_number pour les top signals
 ): Promise<void> {
   // Ajouter au buffer
+  // NOTE: Les transactions ont déjà source_type ajouté dans parseForm4, pas besoin de le refaire ici
   transactionBuffer.push({
-    companyId,
+    company_cik,
     filingId,
-    transactions,
+    accessionNumber, // Stocker accession_number dans le buffer
+    transactions: transactions, // Les transactions ont déjà source_type
     timestamp: Date.now(),
   });
 
@@ -642,8 +1221,9 @@ async function flushTransactionBuffer(): Promise<void> {
     for (const transaction of bufferItem.transactions) {
       allTransactions.push({
         id: generateId(),
-        company_id: bufferItem.companyId,
+        company_cik: bufferItem.company_cik,
         filing_id: bufferItem.filingId,
+        accession_number: bufferItem.accessionNumber, // Ajouter accession_number aux transactions
         insider_name: transaction.insider_name,
         insider_cik: transaction.insider_cik,
         insider_title: transaction.relation,
@@ -651,6 +1231,7 @@ async function flushTransactionBuffer(): Promise<void> {
         transaction_type: transaction.transaction_type.toLowerCase(),
         shares: Math.round(transaction.shares),
         price_per_share: transaction.price_per_share,
+        source_type: transaction.source_type || 'ATOM_FEED', // Inclure source_type
         total_value: transaction.total_value,
         transaction_date: transaction.transaction_date,
         alert_flag: transaction.total_value > 1000000,
@@ -678,7 +1259,7 @@ async function flushTransactionBuffer(): Promise<void> {
         // Dédupliquer les signals avant insertion (même insider, même date, même montant)
         const uniqueSignals = new Map<string, any>();
         for (const signal of topSignals) {
-          const key = `${signal.insider_name}|${signal.company_id}|${signal.transaction_date}|${signal.total_value}`;
+          const key = `${signal.insider_name}|${signal.company_cik}|${signal.transaction_date}|${signal.total_value}`;
           if (!uniqueSignals.has(key)) {
             uniqueSignals.set(key, signal);
           } else {
@@ -701,15 +1282,42 @@ async function flushTransactionBuffer(): Promise<void> {
         
         if ((TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) || DISCORD_WEBHOOK_URL) {
           try {
+            // Filtrer seulement les transactions du jour (pas l'historique)
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            const todaySignals = deduplicatedSignals.filter(signal => {
+              if (!signal.transaction_date) {
+                return false;
+              }
+              // Convertir transaction_date en string YYYY-MM-DD pour comparaison
+              let signalDateStr: string;
+              if (typeof signal.transaction_date === 'string') {
+                signalDateStr = signal.transaction_date.split('T')[0];
+              } else {
+                const signalDate = new Date(signal.transaction_date);
+                signalDateStr = signalDate.toISOString().split('T')[0];
+              }
+              return signalDateStr === todayStr;
+            });
+
+            if (todaySignals.length === 0) {
+              console.log(`[Top Signals] ⚠️ No signals for today (${todayStr}), skipping alerts`);
+              return;
+            }
+
+            console.log(`[Top Signals] 📅 Filtered ${todaySignals.length} signals for today (${todayStr}) out of ${deduplicatedSignals.length} total`);
+
             // Enrichir les signals avec les infos de company
             const enrichedSignals = await Promise.all(
-              topSignals.map(async (signal) => {
+              todaySignals.map(async (signal) => {
                 try {
                   // Récupérer ticker et company_name depuis companies
                   const companyQuery = `
                     SELECT ticker, name 
                     FROM companies 
-                    WHERE id = ${signal.company_id} 
+                    WHERE cik = ${signal.company_cik} 
                     LIMIT 1
                   `;
                   const companyResults = await executeAthenaQuery(companyQuery);
@@ -789,7 +1397,7 @@ function generateId(): number {
  */
 const INSIDER_TRADES_SCHEMA = new ParquetSchema({
   id: { type: 'INT64', optional: false },
-  company_id: { type: 'INT64', optional: true },
+  company_cik: { type: 'UTF8', optional: false },
   filing_id: { type: 'INT64', optional: true },
   insider_name: { type: 'UTF8', optional: true },
   insider_cik: { type: 'UTF8', optional: true },
@@ -801,6 +1409,7 @@ const INSIDER_TRADES_SCHEMA = new ParquetSchema({
   total_value: { type: 'DOUBLE', optional: true },
   transaction_date: { type: 'DATE', optional: true },
   alert_flag: { type: 'BOOLEAN', optional: true },
+  source_type: { type: 'UTF8', optional: true }, // COMPANY_FEED, INSIDER_FEED, ATOM_FEED
   created_at: { type: 'TIMESTAMP_MILLIS', optional: true },
 });
 
@@ -947,9 +1556,60 @@ async function writeImportantTransactionsToDynamoDB(transactions: any[]): Promis
 /**
  * Mettre à jour le statut du filing
  */
-async function updateFilingStatus(filingId: number, status: string): Promise<void> {
-  // TODO: Mettre à jour le statut dans Athena/S3
-  console.log(`[Filing Update] Would update filing ${filingId} to status ${status}`);
+/**
+ * Mettre à jour le statut et period_of_report d'un filing dans S3 Parquet
+ */
+async function updateFilingStatus(filingId: number, status: string, periodOfReport?: string | null): Promise<void> {
+  try {
+    // Récupérer le filing existant
+    const filingQuery = `
+      SELECT id, company_cik, cik, form_type, accession_number, filing_date, period_of_report, document_url, status, created_at
+      FROM company_filings
+      WHERE id = ${filingId}
+      LIMIT 1
+    `;
+    const filingResults = await executeAthenaQuery(filingQuery);
+    
+    if (filingResults.length === 0) {
+      console.warn(`[Filing Update] Filing ${filingId} not found, cannot update`);
+      return;
+    }
+    
+    const existingFiling = filingResults[0];
+    const now = new Date();
+    
+    // Utiliser filing_date pour déterminer la partition (pas la date actuelle)
+    // Cela garantit que le fichier mis à jour est dans la même partition que l'original
+    const filingDate = existingFiling.filing_date 
+      ? new Date(existingFiling.filing_date)
+      : now;
+    const partitionYear = filingDate.getUTCFullYear();
+    const partitionMonth = filingDate.getUTCMonth() + 1;
+    console.log('existingFiling', existingFiling);
+    console.log('periodOfReport', periodOfReport);
+    // Préparer les données mises à jour
+    const updatedFiling = {
+      id: filingId,
+      company_cik: existingFiling.company_cik || null,
+      cik: existingFiling.cik || null,
+      form_type: existingFiling.form_type || '4',
+      accession_number: existingFiling.accession_number || null,
+      filing_date: existingFiling.filing_date || now.toISOString().split('T')[0],
+      period_of_report: periodOfReport || existingFiling.period_of_report || null,
+      document_url: existingFiling.document_url || null,
+      status: status,
+      created_at: existingFiling.created_at || now.toISOString(),
+      updated_at: now.toISOString(),
+    };
+    
+    // Écrire la mise à jour dans S3 Parquet avec la partition basée sur filing_date
+    await writeToS3ParquetInPartition('company_filings', [updatedFiling], COMPANY_FILINGS_SCHEMA, partitionYear, partitionMonth);
+    
+    console.log(`[Filing Update] ✅ Updated filing ${filingId}: status=${status}, period_of_report=${periodOfReport || 'N/A'} (partition: year=${partitionYear}/month=${partitionMonth})`);
+  } catch (error: any) {
+    console.error(`[Filing Update] Error updating filing ${filingId}:`, error.message);
+    // Ne pas faire échouer le parsing si la mise à jour échoue
+  }
 }
 
 /**
@@ -1011,8 +1671,9 @@ function filterTopSignals(transactions: any[]): any[] {
     }
     
     topSignals.push({
-      company_id: tx.company_id,
+      company_cik: tx.company_cik,
       filing_id: tx.filing_id,
+      accession_number: tx.accession_number, // Ajouter accession_number aux top signals
       insider_name: tx.insider_name,
       insider_cik: tx.insider_cik,
       insider_title: tx.insider_title || tx.relation,
@@ -1023,6 +1684,7 @@ function filterTopSignals(transactions: any[]): any[] {
       total_value: tx.total_value,
       transaction_date: tx.transaction_date,
       signal_score: Math.min(score, 10), // Max 10
+      source_type: tx.source_type || 'ATOM_FEED', // Inclure source_type
       created_at: tx.created_at || new Date().toISOString(),
     });
   }
@@ -1065,8 +1727,9 @@ async function insertTopSignals(signals: any[]): Promise<void> {
     const tempFilePath = path.join(tempDir, `top_signals_${Date.now()}.parquet`);
     
     const TOP_SIGNALS_SCHEMA = new ParquetSchema({
-      company_id: { type: 'INT64', optional: true },
+      company_cik: { type: 'UTF8', optional: false },
       filing_id: { type: 'INT64', optional: true },
+      accession_number: { type: 'UTF8', optional: true }, // Ajouter accession_number au schéma
       insider_name: { type: 'UTF8', optional: true },
       insider_cik: { type: 'UTF8', optional: true },
       insider_title: { type: 'UTF8', optional: true },
@@ -1077,6 +1740,7 @@ async function insertTopSignals(signals: any[]): Promise<void> {
       total_value: { type: 'DOUBLE', optional: true },
       transaction_date: { type: 'DATE', optional: true },
       signal_score: { type: 'INT32', optional: true },
+      source_type: { type: 'UTF8', optional: true }, // COMPANY_FEED, INSIDER_FEED, ATOM_FEED
       created_at: { type: 'TIMESTAMP_MILLIS', optional: true },
     });
     

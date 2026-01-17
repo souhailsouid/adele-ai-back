@@ -332,16 +332,23 @@ export async function enrichCompaniesBatch(
     delayMs,
   });
 
+  // ✅ OPTIMISATION: Batch query pour éviter N requêtes Supabase
+  // Au lieu de 1 requête par ticker, on fait 1 requête batch totale
+  const { data: existingCompanies } = await supabase
+    .from("companies")
+    .select("ticker, sector, industry")
+    .in("ticker", uniqueTickers);
+
+  const existingMap = new Map(
+    existingCompanies?.map(c => [c.ticker.toUpperCase(), { sector: c.sector, industry: c.industry }]) || []
+  );
+
   for (let i = 0; i < uniqueTickers.length; i++) {
     const ticker = uniqueTickers[i];
     const cik = cikMap?.get(ticker);
 
-    // Vérifier d'abord si l'entreprise existe déjà avec secteur
-    const { data: existing } = await supabase
-      .from("companies")
-      .select("id, sector, industry")
-      .eq("ticker", ticker)
-      .maybeSingle();
+    // Vérifier d'abord si l'entreprise existe déjà avec secteur (depuis le map)
+    const existing = existingMap.get(ticker);
 
     if (existing?.sector && existing?.industry) {
       log.debug(`Company ${ticker} already has sector and industry, skipping`);

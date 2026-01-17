@@ -197,7 +197,9 @@ async function testAllRoutes() {
     console.log(`   ❌ Status: ${hotSignalsResult.status}`);
     console.log(`   ⚠️  Erreur: ${hotSignalsResult.error}`);
   }
-  console.log('');
+    console.log('');
+    
+
 
   // Résumé
   console.log('═══════════════════════════════════════════════════════════');

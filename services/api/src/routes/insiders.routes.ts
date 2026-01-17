@@ -24,19 +24,30 @@ function getQueryParam(event: APIGatewayProxyEventV2, key: string): string | und
 export const insidersRoutes: Route[] = [
   /**
    * GET /insiders/trending
-   * Top entreprises avec le plus d'achats d'insiders sur les 7 derniers jours
+   * Top entreprises avec le plus d'achats d'insiders (pondéré par volume financier)
+   * 
+   * Filtre: Uniquement les transactions "P" (Purchase - Achat sur marché ouvert)
+   * Exclut: "G" (Gifts/Cadeaux) et "A" (Attribution gratuite d'options)
    * 
    * Query params:
-   * - days: nombre de jours (défaut: 7)
+   * - days: nombre de jours (défaut: 7, accepte n'importe quel nombre positif)
    * - limit: nombre de résultats (défaut: 20)
    */
   {
     method: "GET",
     path: "/insiders/trending",
     handler: async (event) => {
-      const days = getQueryParam(event, "days") 
-        ? parseInt(getQueryParam(event, "days")!, 10) 
-        : 7;
+      const daysParam = getQueryParam(event, "days");
+      let days = 7; // Défaut
+      
+      if (daysParam) {
+        const parsedDays = parseInt(daysParam, 10);
+        // Valider que c'est un nombre positif et raisonnable (max 365 jours)
+        if (!isNaN(parsedDays) && parsedDays > 0 && parsedDays <= 365) {
+          days = parsedDays;
+        }
+      }
+      
       const limit = getQueryParam(event, "limit") 
         ? parseInt(getQueryParam(event, "limit")!, 10) 
         : 20;
@@ -250,6 +261,134 @@ export const insidersRoutes: Route[] = [
         : 5;
 
       return await insidersService.getHotSignals(limit, minScore);
+    },
+  },
+
+  /**
+   * GET /insiders/filings
+   * Liste des Form 4 filings avec pagination
+   * 
+   * Query params:
+   * - limit: nombre de résultats (défaut: 50)
+   * - offset: offset pour pagination (défaut: 0)
+   * - days: filtrer par nombre de jours (optionnel)
+   */
+  {
+    method: "GET",
+    path: "/insiders/filings",
+    handler: async (event) => {
+      const limit = getQueryParam(event, "limit") 
+        ? parseInt(getQueryParam(event, "limit")!, 10) 
+        : 50;
+      const offset = getQueryParam(event, "offset") 
+        ? parseInt(getQueryParam(event, "offset")!, 10) 
+        : 0;
+      const days = getQueryParam(event, "days")
+        ? parseInt(getQueryParam(event, "days")!, 10)
+        : undefined;
+      const hasTransactions = getQueryParam(event, "has_transactions") !== 'false'; // Défaut: true
+
+      return await insidersService.getForm4Filings(limit, offset, days, hasTransactions);
+    },
+  },
+
+  /**
+   * GET /insiders/filings/{filingId}
+   * Détails d'un Form 4 filing
+   */
+  {
+    method: "GET",
+    path: "/insiders/filings/{filingId}",
+    handler: async (event) => {
+      const filingId = getPathParam(event, "filingId");
+      if (!filingId) throw new Error("Missing filingId parameter");
+
+      const filing = await insidersService.getForm4Filing(parseInt(filingId, 10));
+      
+      if (!filing) {
+        return {
+          error: "Filing not found",
+          filingId: filingId,
+        };
+      }
+
+      return filing;
+    },
+  },
+
+  /**
+   * GET /insiders/company/{ticker}/filings
+   * Form 4 filings pour une entreprise
+   * 
+   * Query params:
+   * - limit: nombre de résultats (défaut: 50)
+   * - offset: offset pour pagination (défaut: 0)
+   */
+  {
+    method: "GET",
+    path: "/insiders/company/{ticker}/filings",
+    handler: async (event) => {
+      const ticker = getPathParam(event, "ticker");
+      if (!ticker) throw new Error("Missing ticker parameter");
+
+      const limit = getQueryParam(event, "limit") 
+        ? parseInt(getQueryParam(event, "limit")!, 10) 
+        : 50;
+      const offset = getQueryParam(event, "offset") 
+        ? parseInt(getQueryParam(event, "offset")!, 10) 
+        : 0;
+      const hasTransactions = getQueryParam(event, "has_transactions") !== 'false'; // Défaut: true
+
+      return await insidersService.getCompanyForm4Filings(ticker, limit, offset, hasTransactions);
+    },
+  },
+
+  /**
+   * GET /insiders/person/{cik}/filings
+   * Form 4 filings pour un insider
+   * 
+   * Query params:
+   * - limit: nombre de résultats (défaut: 50)
+   * - offset: offset pour pagination (défaut: 0)
+   */
+  {
+    method: "GET",
+    path: "/insiders/person/{cik}/filings",
+    handler: async (event) => {
+      const cik = getPathParam(event, "cik");
+      if (!cik) throw new Error("Missing cik parameter");
+
+      const limit = getQueryParam(event, "limit") 
+        ? parseInt(getQueryParam(event, "limit")!, 10) 
+        : 50;
+      const offset = getQueryParam(event, "offset") 
+        ? parseInt(getQueryParam(event, "offset")!, 10) 
+        : 0;
+      const hasTransactions = getQueryParam(event, "has_transactions") !== 'false'; // Défaut: true
+
+      return await insidersService.getInsiderForm4Filings(cik, limit, offset, hasTransactions);
+    },
+  },
+
+  /**
+   * GET /insiders/filings/{filingId}/transactions
+   * Transactions d'un Form 4 filing
+   * 
+   * Query params:
+   * - limit: nombre de résultats (défaut: 100)
+   */
+  {
+    method: "GET",
+    path: "/insiders/filings/{filingId}/transactions",
+    handler: async (event) => {
+      const filingId = getPathParam(event, "filingId");
+      if (!filingId) throw new Error("Missing filingId parameter");
+
+      const limit = getQueryParam(event, "limit") 
+        ? parseInt(getQueryParam(event, "limit")!, 10) 
+        : 100;
+
+      return await insidersService.getForm4FilingTransactions(parseInt(filingId, 10), limit);
     },
   },
 ];

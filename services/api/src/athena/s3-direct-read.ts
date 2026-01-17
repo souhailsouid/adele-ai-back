@@ -1,9 +1,26 @@
 /**
  * Lecture directe depuis S3 pour les petites requêtes (lookups par ID)
  * 
- * Évite le minimum de facturation d'Athena (10MB) pour les requêtes simples
- * Plus rapide et moins cher que Athena pour récupérer une seule ligne
+ * ⚠️ INTERDIT EN PRODUCTION - SÉCURITÉ COÛT
+ * 
+ * Cette fonction génère des centaines de milliers de requêtes S3 GET (coût élevé).
+ * Utiliser Athena avec cache Lambda à la place pour les APIs.
+ * 
+ * Cette fonction est conservée uniquement pour:
+ * - Tests locaux (scripts de développement)
+ * - Migration de données (one-shot)
+ * 
+ * ⚠️ NE PAS utiliser dans le code de production (APIs, Lambdas, CRONs)
  */
+
+// 🔒 BARRIÈRE SÉCURITÉ: Throw en production pour éviter les coûts catastrophiques
+if (process.env.NODE_ENV === 'production' || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  throw new Error(
+    's3-direct-read is DISABLED in production (cost safety). ' +
+    'Use Athena with Lambda cache instead. ' +
+    'This function generated 43M+ S3 GET requests ($18/day).'
+  );
+}
 
 import { S3Client, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import * as parquetjs from 'parquetjs';

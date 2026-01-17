@@ -97,7 +97,7 @@ resource "aws_lambda_function_event_invoke_config" "api" {
 resource "aws_apigatewayv2_integration" "api_lambda" {
   api_id                 = aws_apigatewayv2_api.http.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.api.arn
+  integration_uri        = aws_lambda_function.api.invoke_arn
   payload_format_version = "2.0"
   # API Gateway v2 limite max: 30000ms (30s). La Lambda a 60s pour gérer les endpoints lourds.
   # Si la Lambda prend > 30s, l'API Gateway retournera 504, mais la Lambda continuera.

@@ -83,3 +83,52 @@ resource "aws_apigatewayv2_route" "get_insiders_signals_hot" {
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
+
+# ============================================
+# Routes Form 4 Filings
+# ============================================
+
+# GET /insiders/filings
+resource "aws_apigatewayv2_route" "get_insiders_filings" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /insiders/filings"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# GET /insiders/filings/{filingId}
+resource "aws_apigatewayv2_route" "get_insiders_filing" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /insiders/filings/{filingId}"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# GET /insiders/company/{ticker}/filings
+resource "aws_apigatewayv2_route" "get_insiders_company_filings" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /insiders/company/{ticker}/filings"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# GET /insiders/person/{cik}/filings
+resource "aws_apigatewayv2_route" "get_insiders_person_filings" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /insiders/person/{cik}/filings"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# GET /insiders/filings/{filingId}/transactions
+resource "aws_apigatewayv2_route" "get_insiders_filing_transactions" {
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "GET /insiders/filings/{filingId}/transactions"
+  target             = "integrations/${aws_apigatewayv2_integration.api_lambda.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}

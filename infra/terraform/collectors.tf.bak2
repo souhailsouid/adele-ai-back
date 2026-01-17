@@ -50,6 +50,9 @@ resource "aws_lambda_event_source_mapping" "collector_sec_watcher_sqs" {
   function_name    = aws_lambda_function.collector_sec_watcher.arn
   batch_size       = 1 # Traiter 1 message à la fois pour éviter la surcharge
   enabled          = true
+
+  # ⚠️ IMPORTANT: Activer reportBatchItemFailures pour retry uniquement les messages échoués
+  function_response_types = ["ReportBatchItemFailures"]
 }
 
 # ============================================

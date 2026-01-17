@@ -355,4 +355,5 @@ resource "aws_iam_role_policy_attachment" "collector_eventbridge" {
   policy_arn = aws_iam_policy.collector_eventbridge_policy.arn
 }
 
+# Note: Permissions Athena et S3 pour collector_role sont définies dans collectors-athena-s3.tf
 # Permissions Athena pour collector_role (sec-smart-money-sync a besoin d'Athena)
